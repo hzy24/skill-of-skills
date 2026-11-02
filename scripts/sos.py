@@ -574,6 +574,9 @@ def ledger(p, statepath, action, node_id=None, evidence=None, paths=None, plan_d
     if s['plan_hash']!=execution_digest(p): raise ValueError('计划已修改，请复核新版本并 reconcile 更新执行记录')
     if action=='audit':
         failures=[]
+        from handoff import require as require_handoff
+        try:require_handoff(p,base_dir)
+        except (ValueError,KeyError,OSError) as error:failures.append(str(error))
         if p.get('review_protocol_version')==2:
             from method_review import check_current
             try:check_current(p,base_dir)
@@ -583,7 +586,7 @@ def ledger(p, statepath, action, node_id=None, evidence=None, paths=None, plan_d
             node=next(n for n in p['nodes'] if n['id']==nid)
             if r['status']=='complete' and any(m['id'] in node['inputs'] for m in p['materials']) and 'input_hashes' not in r: failures.append(nid+' 缺少来源版本记录，请重新执行')
             if r['status']!='complete': failures.append(nid + ' 尚未完成')
-            if p.get('review_protocol_version')==2 and node['method']!='human' and not r.get('substantive_review',{}).get('passed'):failures.append(nid+' 实质审阅未通过')
+            if p.get('review_protocol_version')==2 and node['method']!='human' and not r.get('substantive_review',{}).get('passed'):failures.append(nid+' 计划履约核对未通过')
             if p.get('capability_policy_version')==3 and node['bindings'] and not r.get('skill_usage'):failures.append(nid+' 缺少专业技能执行记录')
             for check in r.get('checks',[]):
                 f=Path(check['path'])
@@ -591,6 +594,8 @@ def ledger(p, statepath, action, node_id=None, evidence=None, paths=None, plan_d
         event(s,'audit',failures=failures); save_state(statepath,s)
         return {'complete':not failures,'failures':failures,'plan_revision':p['revision']}
     if action=='approve':
+        from handoff import require as require_handoff
+        require_handoff(p,base_dir,evidence,confirm=True)
         if p['mode']=='plan_only': raise ValueError('当前为仅规划模式')
         if not evidence: raise ValueError('需记录用户的明确执行指令')
         s['approved']=True; event(s,'approve',evidence=evidence)
@@ -600,6 +605,8 @@ def ledger(p, statepath, action, node_id=None, evidence=None, paths=None, plan_d
         if not n: raise ValueError('未知模块')
         r=s['nodes'][node_id]
         if action=='start':
+            from handoff import require as require_handoff
+            require_handoff(p,base_dir)
             from method_review import check_current
             check_current(p,base_dir)
             require_selection(p, n)
@@ -668,9 +675,9 @@ def ledger(p, statepath, action, node_id=None, evidence=None, paths=None, plan_d
             if p.get('review_protocol_version')==2 and n['method']!='human':
                 from substantive_review import validate as substantive_validate
                 assessment=substantive_validate(p,n,quality_data,r.get('paths',{}))
-                if not assessment['passed']:raise ValueError('实质审阅未通过，修正成果后重新 capture')
+                if not assessment['passed']:raise ValueError('计划履约核对未通过，修正成果后重新 capture')
                 observed={x['skill'] for x in (r.get('trace_inspection') or {}).get('observed',[])}
-                if not observed.issubset(quality_data['observed_skills']):raise ValueError('实质审阅遗漏了实际调用记录中的技能')
+                if not observed.issubset(quality_data['observed_skills']):raise ValueError('计划履约核对遗漏了实际调用记录中的技能')
                 r['substantive_review']=assessment
             if r['status']=='waiting_user':
                 if not paths or set(paths)!=set(n['outputs']): raise ValueError('请保存人工确认记录并提供全部产物')

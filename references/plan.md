@@ -2,7 +2,7 @@
 
 新计划通过业务草案编译，采用 capability_policy: skills_first、capability_policy_version: 3。首次规划见 planning.md 与 draft-format.md；本页仅用于维护展开后的协议。旧版 selection-* 示例保留作兼容测试，不作为新任务模板。
 
-新任务通过 prepare_plan.py --starter 获取空白业务骨架。`../examples/drafts/business.json` 与 repair-skill 仅为自写机制测试夹具，不用于当前任务检索。内容拆解按需查 [内容规划深度](planning-depth.md)。
+新任务通过 prepare_plan.py --starter 获取空白业务骨架。机制测试夹具位于源码仓库的 tests/fixtures，安装包只包含 SoS 自身。内容拆解按需查 [内容规划深度](planning-depth.md)。
 
 顶层：id、title、goal、revision（正整数）、mode（plan_only / execute_after_confirmation）、requirements、materials、deliverables、nodes。具有多部分内容的成果增加 `content_outline`。可增加 assumptions、open_questions、constraints、capability_candidates、role_tasks；约束和交付标准同时写入可追踪 requirements。
 

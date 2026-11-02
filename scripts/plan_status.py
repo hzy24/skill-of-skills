@@ -27,9 +27,9 @@ def assess(p):
     elif installs:
         status='needs_installation_approval';message='方案可审阅；请先确认列出的具体技能安装提案。普通“按方案执行”不会授权新安装。'
     else:
-        status='ready_for_confirmation';message='方案可确认；收到执行指令后，按已有授权完成必要准备并开始工作。'
+        status='ready_for_confirmation';message='请先审阅或修改方案，再在对话中回复“按方案执行”。'
     return dict(status=status,can_confirm=status=='ready_for_confirmation',message=message,issues=issues,
-                preparation=preparation,installation_approval_required=installs,method_quality='来源引用可核对；专业适配与实际交付仍需实质审阅')
+                preparation=preparation,installation_approval_required=installs,method_quality='方法适配按原文评估；执行按 plan 核对技能调用与交付')
 
 if __name__=='__main__':
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('plan');a=ap.parse_args()

@@ -100,6 +100,11 @@ def open_node(plan,state,nid,evidence=None):
                     next=shlex.join([sys.executable,str(Path(__file__).with_name('method_review.py')),'open',str(plan)]) if readiness['status']=='needs_method_review' else None)
     from method_review import check_current
     check_current(p,plan.parent)
+    from handoff import require as require_handoff
+    approved=state.exists() and sos.read_state(state).get('approved') and sos.read_state(state).get('plan_hash')==sos.execution_digest(p)
+    try:require_handoff(p,plan.parent,evidence,confirm=not approved)
+    except (ValueError,KeyError,OSError) as error:
+        return dict(status='awaiting_user_confirmation' if (plan.parent/'.sos-handoff.json').exists() else 'needs_plan_delivery',instruction=str(error),outputs={})
     pending=[b['skill'] for b in n['bindings'] if b.get('readiness')!='ready' or next(c for c in p['capability_candidates'] if c['id']==b['candidate_id'])['setup']['status']!='available']
     review_needed=p.get('selection_needs_review') and nid in p.get('selection_review_nodes',[x['id'] for x in p['nodes']])
     if pending or review_needed:

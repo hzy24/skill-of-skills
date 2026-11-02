@@ -53,8 +53,8 @@ def packet(p,base):
     return dict(schema='sos-method-review-v1',basis_hash=basis(p),source_hashes=sources(p,base),
                 goal=p['goal'],mapping=p.get('mapping'),materials=p['materials'],deliverables=p['deliverables'],
                 assignments=[dict(node=n['id'],work=n['description'],outputs=n['outputs'],skills=[b['skill'] for b in n['bindings']]) for n in p['nodes']],
-                grader=str(ROOT/'vendor/skill-creator/skills/skill-creator/agents/grader.md'),
-                instruction='逐项核读所选方法与输入画像，判断能否承担 question 中的工作及负责成果。文件操作/格式验证不能证明具备业务判断方法；制作本身是目标时制作技能可以胜任。核查核心方法与制作职责是否均有实际分工；候选列表中出现技能不代表它已负责工作。仅记录本次适配、依据与判断边界，不开展分析或起草。无方法覆盖时标 fail；证据未读到标 unverified。',
+                review_guide=str(ROOT/'references/composed-methods.md'),
+                instruction='逐项核读所选方法与输入画像，判断能否承担 question 中的工作及负责成果。核心项的 reason 要指出本任务需要的专业判断，以及原文提供的对应方法；通用的分析、比较、呈现、验证流程不足以证明领域判断已覆盖。缺少核心方法时标 fail 并实际寻找专业候选。用户是否熟悉术语不改变此标准。文件操作/格式验证不能证明具备业务判断方法；制作本身是目标时制作技能可以胜任。核查核心方法与制作职责是否均有实际分工；候选列表中出现技能不代表它已负责工作。仅记录本次适配、依据与判断边界，不开展分析或起草。无方法覆盖时标 fail；证据未读到标 unverified。',
                 items=rows)
 
 def accept(p,data,base):

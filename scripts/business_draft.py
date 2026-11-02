@@ -78,7 +78,7 @@ def expand(d, base=None):
                 if not proposal_path.is_absolute():proposal_path=Path(base or '.')/proposal_path
                 proposal=validate(json.loads(proposal_path.read_text()))
                 if not same_name(name,proposal['name']):raise ValueError('安装提案与技能名不一致')
-                if base is not None and proposal['schema']=='sos-install-proposal-v1':
+                if base is not None and proposal['schema'] in ('sos-install-proposal-v1','sos-tencent-proposal-v1'):
                     method_path=Path(values['method_file'])
                     if not method_path.is_absolute():method_path=Path(base)/method_path
                     verify_file(next(item for item in proposal['files'] if item['path']=='SKILL.md'),method_path.read_bytes())

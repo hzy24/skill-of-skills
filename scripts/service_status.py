@@ -20,7 +20,7 @@ def status(meta):
     return {'ready':True,'plan_readiness':readiness,'revision':plan['revision'],'plan':state['plan'],'html':state['html'],
             'delivery_files':[state['html'],state['plan']],
             'execution_plan':state['plan'],
-            'next':readiness['message']+' 用 PresentToUser 同时交付 delivery_files 中的两个文件；核对工具回执含 plan.html 和 plan.json。执行时读取 execution_plan 最新版本。'}
+            'next':readiness['message']+' 用 PresentToUser 同时交付 delivery_files 中的两个文件；核对工具回执含 plan.html 和 plan.json。保存实际回执后运行 handoff.py record 登记交付，结束规划回复等待用户确认。执行时读取 execution_plan 最新版本。'}
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('meta');a=ap.parse_args()

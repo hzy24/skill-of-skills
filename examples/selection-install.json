@@ -1,0 +1,137 @@
+{
+  "id": "selection-install",
+  "title": "虚构示例：安装候选的审阅流程",
+  "goal": "从扫描通知中提取时间、地点、报名方式，保留页码与识别不确定项。",
+  "revision": 1,
+  "mode": "execute_after_confirmation",
+  "requirements": [
+    {
+      "id": "R1",
+      "text": "从扫描通知中提取时间、地点、报名方式，保留页码与识别不确定项。"
+    }
+  ],
+  "materials": [
+    {
+      "id": "notice",
+      "title": "原始通知",
+      "path": "notice.txt"
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "summary",
+      "title": "通知摘要",
+      "description": "三条清晰的活动信息。"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "N1",
+      "title": "提炼活动信息",
+      "description": "识别扫描页，提取三项信息及页码，对照扫描图核对字符，模糊内容记录待核实。",
+      "reason": "扫描件需要文字识别，当前环境只有文本读取能力。",
+      "method": "skill",
+      "depends_on": [],
+      "inputs": [
+        "notice"
+      ],
+      "outputs": [
+        "summary"
+      ],
+      "requirements": [
+        "R1"
+      ],
+      "done_when": [
+        "三项信息齐全并忠于原文。"
+      ],
+      "checks": [
+        {
+          "kind": "text_contains",
+          "artifact": "summary",
+          "values": [
+            "时间",
+            "地点",
+            "报名"
+          ]
+        },
+        {
+          "kind": "review",
+          "artifact": "summary",
+          "id": "content-match",
+          "criteria": "时间、地点、报名方式逐项与通知原文一致，缺失信息保留未知"
+        }
+      ],
+      "bindings": [
+        {
+          "skill": "fixture-notice-reader",
+          "candidate_id": "fixture",
+          "scope": "扫描识别、字段提取与来源核对",
+          "reason": "虚构安装流程示例",
+          "readiness": "needs_setup"
+        }
+      ],
+      "capability_need_ids": [
+        "extract"
+      ]
+    }
+  ],
+  "capability_contract_version": 1,
+  "quality_contract_version": 1,
+  "selection_contract_version": 1,
+  "capability_needs": [
+    {
+      "id": "extract",
+      "requirement_ids": [
+        "R1"
+      ],
+      "standard": "三项信息与扫描原文一致，模糊字符标为待核实",
+      "existing_assessment": "当前能读取文本，缺少扫描件文字识别入口",
+      "outline_ids": [],
+      "decision": {
+        "kind": "skill",
+        "candidate_id": "fixture",
+        "fit": "supported",
+        "reason": "夹具方法覆盖三项信息与来源核对",
+        "application": "识别后逐项对应原页面，模糊字符进入待核实清单"
+      },
+      "gap": "扫描图片需要文字识别及页码定位",
+      "discovery": {
+        "status": "searched",
+        "evidence": "虚构候选夹具，未进行真实互联网检索"
+      },
+      "task_kind": "basic"
+    }
+  ],
+  "capability_candidates": [
+    {
+      "id": "fixture",
+      "name": "fixture-notice-reader",
+      "source": "fixture://example/SKILL.md",
+      "version": "fixture-1",
+      "license": "虚构测试数据，不可用于真实安装",
+      "evidence": [
+        {
+          "kind": "method",
+          "locator": "fixture://example/SKILL.md#extract",
+          "finding": "虚构OCR方法：读取扫描页、定位字段、标记低置信字符并对照页面"
+        }
+      ],
+      "setup": {
+        "status": "approval_needed",
+        "dependencies": "OCR引擎及图片读取工具",
+        "permissions": "仅示例任务目录",
+        "verification": "",
+        "request_reason": "补齐扫描件文字识别和来源页码定位",
+        "installation": "虚构候选，无实际安装地址；真实使用须换成核验过的来源和版本",
+        "fallback": "请提供可复制文本后提取；模糊字符由用户核对"
+      },
+      "method_support": {
+        "material_id": "method",
+        "workflow": "在副本复现空输入，修复入口并保持非空转换行为",
+        "checks": "执行随包回归测试并核对非法非空项仍报错"
+      }
+    }
+  ],
+  "capability_policy": "skills_first",
+  "capability_policy_version": 2
+}

@@ -26,7 +26,7 @@ CANDIDATE.update(evidence=[{'kind':str,'locator':str,'finding':str}],setup={k:st
  ('status','dependencies','permissions','verification','request_reason','installation','fallback','authorization')})
 CANDIDATE['method_support']={'material_id':str,'workflow':str,'checks':str,'sha256':str}
 SHAPE={k:str for k in ('id','title','goal','mode','capability_policy')}
-SHAPE.update(review_protocol_version=int,professional_review={'basis_hash':str,'verdict':str,'source_hashes':{},'items':[{}]})
+SHAPE.update(handoff_protocol_version=int,review_protocol_version=int,professional_review={'basis_hash':str,'verdict':str,'source_hashes':{},'items':[{}]})
 SHAPE.update({k:int for k in ('revision','max_attempts','capability_contract_version','selection_contract_version','quality_contract_version','capability_policy_version')})
 SHAPE.update(requirements=[{'id':str,'text':str}],materials=[{'id':str,'title':str,'path':str,'source_url':str}],
  deliverables=[{'id':str,'title':str,'description':str,'format':str,'outline_level':str,'outline_ids':TEXTS}],nodes=[NODE],

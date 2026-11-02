@@ -47,3 +47,14 @@ python <skill>/scripts/service_status.py <绝对任务目录>/.plan-server.json
 删除模块表示取消该模块及其独占交付。保存服务同步移除专属交付物、无剩余负责人使用的能力需求与独占需求，保留共用内容，记录 scope_changes。仍有下游依赖时先调整其输入与依赖或一并删除；保存前可恢复。用户确认执行时复核剩余目标和说明中是否仍提及已取消成果，再按最新范围执行。范围记录保留在方案中，删除不启动执行。
 
 “导出备份”保留未保存内容和删除标记，仅用于故障恢复；正常流程仍在页面保存。备份绑定原始方案版本，版本冲突时需合并，导入不会自动执行。
+
+
+## 登记附件交付并结束规划
+
+PresentToUser 成功返回后，将该次工具的原始文本结果（包含两个 file_path 及 Files copied 记录）保存为 present-result.txt。也可保存完整 tool_result JSON。运行：
+
+```sh
+python <skill>/scripts/handoff.py record <任务目录>/plan.json --html <任务目录>/plan.html --receipt <任务目录>/present-result.txt
+```
+
+只有 HTML 和 JSON 均有成功交付回执才会登记。命令返回 awaiting_user_confirmation 后，结束本轮回复并等待用户审阅。不要继续打开执行模块、计算指标或制作成果。用户修改并保存后说“按方案执行”，读取同一目录最新 plan.json；无需重新导出附件或再次登记交付。

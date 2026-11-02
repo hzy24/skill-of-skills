@@ -2,23 +2,19 @@
 """Build bounded discovery requests for host tools. No fabricated search results."""
 import argparse,json
 from pathlib import Path
-CHANNELS=('yuanjing-market','claude-skillhub')
+# Claude SkillHub and Yuanjing market discovery are paused for the current release.
+CHANNELS=('tencent-skillhub',)
 
 def discovery_plan(queries,sources=CHANNELS):
     queries=list(dict.fromkeys(q.strip() for q in queries))
     if not 1<=len(queries)<=3 or any(not q for q in queries):raise ValueError('提供1–3个业务方法关键词')
-    if not sources or any(s not in CHANNELS for s in sources):raise ValueError('候选发现仅限元景市场和 Claude SkillHub（claudeskillhub.com）')
-    requests=[]
-    for source in dict.fromkeys(sources):
-        for q in queries:
-            requests.append({'source':source,'query':('site:claudeskillhub.com '+q) if source=='claude-skillhub' else q,
-                             'tool':'host_web_search' if source=='claude-skillhub' else 'host_market_search','status':'not_run'})
-    return {'status':'host_search_required','searches':requests,'candidates':[],'reading_limit':3,'query_revision_limit':1,'source_fetch_attempt_limit':2,'source_fetch_timeout_seconds':60,
-            'next':'宿主执行检索，读取最相关候选的原始方法；本文件只准备搜索请求，不代表已经搜索。GitHub仅用于候选原文追溯、版本核验和下载。'}
+    if not sources or any(s not in CHANNELS for s in sources):raise ValueError('本版只从腾讯 SkillHub（skillhub.cn）发现新能力')
+    return dict(status='host_search_required',searches=[dict(source='tencent-skillhub',query=q,tool='search_skills.py',status='not_run') for q in queries],candidates=[],reading_limit=3,query_revision_limit=1,source_fetch_attempt_limit=2,source_fetch_timeout_seconds=60,
+                next='运行 search_skills.py <查询词...> --task-dir <当前任务目录> --out <新搜索文件>，实际搜索腾讯官方API；按任务契合度优先、评分和下载量辅助筛选，再用 acquire.py inspect-tencent 读取原文和安装提案。')
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('query',nargs='?');ap.add_argument('--draft',help='从业务草案的 mapping 生成能力检索请求');ap.add_argument('--task-dir',help='手工关键词使用的任务目录，默认输出文件所在目录');ap.add_argument('--also',action='append',default=[])
-    ap.add_argument('--source',choices=['both',*CHANNELS],default='both');ap.add_argument('--out',required=True);a=ap.parse_args()
+    ap.add_argument('--source',choices=CHANNELS,default='tencent-skillhub');ap.add_argument('--out',required=True);a=ap.parse_args()
     try:
         if a.draft:
             if a.query or a.also:raise ValueError('--draft 与手工 query 分开使用')
@@ -29,7 +25,7 @@ def main():
             if not isinstance(capabilities,list) or not capabilities or any(not isinstance(x,str) or not x.strip() for x in capabilities):raise ValueError('mapping.capabilities 需要能力关键词列表')
             queries=[m['domain']+' '+x for x in capabilities[:3]]
         else:queries=([a.query] if a.query else [])+a.also
-        r=discovery_plan(queries,CHANNELS if a.source=='both' else [a.source])
+        r=discovery_plan(queries,[a.source])
         if a.draft:r['task_mapping']=m
         from planning_budget import status,session,session_path
         from plan_io import edit_lock

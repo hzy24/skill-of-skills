@@ -1,0 +1,81 @@
+{
+  "id": "selection-direct",
+  "title": "把通知整理成三条要点",
+  "goal": "保留时间、地点和报名方式，形成便于转发的简短通知。",
+  "requirements": [
+    {
+      "id": "R1",
+      "text": "保留时间、地点和报名方式。"
+    }
+  ],
+  "materials": [
+    {
+      "id": "notice",
+      "title": "原始通知",
+      "path": "notice.txt"
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "summary",
+      "title": "通知摘要",
+      "description": "三条清晰的活动信息。"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "N1",
+      "title": "提炼活动信息",
+      "description": "提取时间、地点和报名方式，逐项核对原文。",
+      "reason": "任务可由原生文本能力完成。",
+      "method": "direct",
+      "inputs": [
+        "notice"
+      ],
+      "outputs": [
+        "summary"
+      ],
+      "requirements": [
+        "R1"
+      ],
+      "checks": [
+        {
+          "kind": "text_contains",
+          "artifact": "summary",
+          "values": [
+            "时间",
+            "地点",
+            "报名"
+          ]
+        },
+        {
+          "kind": "review",
+          "artifact": "summary",
+          "criteria": "时间、地点、报名方式逐项与通知原文一致，缺失信息保留未知"
+        }
+      ],
+      "capability_need_ids": [
+        "extract"
+      ]
+    }
+  ],
+  "capability_needs": [
+    {
+      "id": "extract",
+      "requirement_ids": [
+        "R1"
+      ],
+      "standard": "三项信息齐全且与原文一致",
+      "existing_assessment": "原文为短通知，当前文本提取能力足够，不需要安装",
+      "outline_ids": [],
+      "decision": {
+        "kind": "direct",
+        "reason": "内容完整且无专业方法缺口",
+        "application": "逐项提取并与原文对照"
+      },
+      "task_kind": "basic"
+    }
+  ],
+  "capability_policy": "skills_first",
+  "capability_policy_version": 2
+}

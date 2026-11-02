@@ -1,0 +1,134 @@
+{
+  "id": "role-operations",
+  "title": "项目运营岗位能力配置",
+  "goal": "形成代表任务和可复用能力配置，选择一个任务试用",
+  "revision": 1,
+  "mode": "execute_after_confirmation",
+  "requirements": [
+    {
+      "id": "R1",
+      "text": "整理月报、异常项目说明和经营会汇报的材料、标准、能力缺口与试用顺序"
+    }
+  ],
+  "materials": [
+    {
+      "id": "notice",
+      "title": "岗位职责与任务样本",
+      "path": "role-brief.md"
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "summary",
+      "title": "岗位配置方案",
+      "description": "代表任务、共用能力、缺口和试用顺序"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "N1",
+      "title": "整理岗位代表任务",
+      "description": "依据职责区分汇总、原因调查和汇报制作，记录输入与质量要求",
+      "reason": "先形成可复用配置，用户再选择试用任务",
+      "method": "direct",
+      "depends_on": [],
+      "inputs": [
+        "notice"
+      ],
+      "outputs": [
+        "summary"
+      ],
+      "requirements": [
+        "R1"
+      ],
+      "done_when": [
+        "三个代表任务均有材料、完成标准与能力需求"
+      ],
+      "checks": [
+        {
+          "kind": "review",
+          "id": "role-coverage",
+          "artifact": "summary",
+          "criteria": "三个代表任务均对应职责；未知频率和工具状态保留待核验；无擅自执行任务"
+        }
+      ],
+      "bindings": [],
+      "capability_need_ids": [
+        "extract"
+      ]
+    }
+  ],
+  "capability_contract_version": 1,
+  "quality_contract_version": 1,
+  "selection_contract_version": 1,
+  "capability_needs": [
+    {
+      "id": "extract",
+      "requirement_ids": [
+        "R1"
+      ],
+      "standard": "准确整理职责与代表任务",
+      "existing_assessment": "文本整理可完成配置草案，具体业务能力在试用任务中核对",
+      "outline_ids": [],
+      "decision": {
+        "kind": "direct",
+        "reason": "当前交付为岗位配置草案",
+        "application": "按任务记录触发、输入、成果与标准，复用共用能力需求"
+      },
+      "task_kind": "basic"
+    }
+  ],
+  "capability_candidates": [],
+  "role_tasks": [
+    {
+      "id": "monthly",
+      "trigger": "月度汇总，具体日期待确认",
+      "inputs": [
+        "本期与上期台账"
+      ],
+      "deliverables": [
+        "经营月报"
+      ],
+      "standards": [
+        "口径一致、变化可解释"
+      ],
+      "capability_need_ids": [
+        "extract"
+      ]
+    },
+    {
+      "id": "exception",
+      "trigger": "项目出现异常",
+      "inputs": [
+        "项目明细、调查记录"
+      ],
+      "deliverables": [
+        "异常说明"
+      ],
+      "standards": [
+        "原因有证据、未解问题可追踪"
+      ],
+      "capability_need_ids": [
+        "extract"
+      ]
+    },
+    {
+      "id": "meeting",
+      "trigger": "经营会前",
+      "inputs": [
+        "已核对的分析结论"
+      ],
+      "deliverables": [
+        "管理层汇报"
+      ],
+      "standards": [
+        "主张与证据一致、决策事项明确"
+      ],
+      "capability_need_ids": [
+        "extract"
+      ]
+    }
+  ],
+  "capability_policy": "skills_first",
+  "capability_policy_version": 2
+}

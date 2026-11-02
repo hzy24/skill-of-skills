@@ -14,6 +14,7 @@ from plan_io import edit_lock
 MAX_PACKAGE = 10 * 1024 * 1024
 MAX_META = 256 * 1024
 MAX_FILES = 100
+CATALOG_HOSTS = {'claudeskillhub.com','www.claudeskillhub.com','skillhub.cn','www.skillhub.cn'}
 
 def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
@@ -34,7 +35,7 @@ class NoRedirect(HTTPRedirectHandler):
         raise ValueError('来源发生重定向；请核对真实地址后重新提案')
 
 def fetch(url, limit, deadline):
-    https(url, {'claudeskillhub.com','www.claudeskillhub.com','api.github.com','raw.githubusercontent.com'})
+    https(url, CATALOG_HOSTS | {'api.github.com','raw.githubusercontent.com'})
     if time.monotonic()>=deadline:raise ValueError('获取时间预算已用完')
     req=Request(url,headers={'User-Agent':'Skill-of-Skills/1.4','Accept':'application/vnd.github+json','Accept-Encoding':'identity'})
     with build_opener(NoRedirect()).open(req,timeout=min(15,max(1,deadline-time.monotonic()))) as response:
@@ -63,6 +64,9 @@ def safe_rel(value):
 
 def validate(p,require_size=False):
     if not isinstance(p,dict):raise ValueError('安装提案需要对象')
+    if p.get('schema')=='sos-tencent-proposal-v1':
+        from tencent_source import validate as validate_tencent
+        return validate_tencent(p)
     if p.get('schema')=='sos-market-proposal-v1':
         for key in ('name','skill_id','version','catalog_url','reason','solves','dependencies','license','metadata_evidence'):
             if not isinstance(p.get(key),str) or not p[key].strip():raise ValueError('元景市场提案缺少 '+key)
@@ -73,7 +77,7 @@ def validate(p,require_size=False):
         if type(size) is not int or not 0<size<=MAX_PACKAGE:raise ValueError('市场下载大小未知或超过 10 MiB，先核对再安装')
         return p
     if p.get('schema')!='sos-install-proposal-v1':raise ValueError('需要 acquire inspect 生成的安装提案')
-    https(p['catalog_url'],{'claudeskillhub.com','www.claudeskillhub.com'})
+    https(p['catalog_url'],CATALOG_HOSTS)
     if not re.fullmatch(r'[0-9a-f]{40}',p['commit']):raise ValueError('版本需要固定的 Git commit')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',p['repo']):raise ValueError('仓库标识无效')
     safe_rel(p['directory'])
@@ -95,7 +99,7 @@ def validate(p,require_size=False):
 
 def inspect(task,catalog,method,reason,solves,dependencies,license_text,reader=fetch):
     task=Path(task).resolve();task.mkdir(parents=True,exist_ok=True)
-    https(catalog,{'claudeskillhub.com','www.claudeskillhub.com'})
+    https(catalog,CATALOG_HOSTS)
     u=https(method,{'raw.githubusercontent.com','github.com'})
     parts=unquote(u.path).strip('/').split('/')
     if u.hostname=='github.com':
@@ -122,7 +126,7 @@ def inspect(task,catalog,method,reason,solves,dependencies,license_text,reader=f
         deadline=time.monotonic()+min(60,300-(time.time()-b['started']))
         page=reader(catalog,MAX_META,deadline);links=Links();links.feed(page.decode('utf-8',errors='replace'))
         if not any(urlparse(link).hostname=='github.com' and unquote(urlparse(link).path).strip('/').split('/')[:2]==repo.split('/') for link in links.links):
-            raise ValueError('Claude SkillHub 详情页未提供对应仓库链接；不能将其他目录冒记为该来源')
+            raise ValueError('技能目录详情页未提供对应仓库链接；不能将其他目录冒记为该来源')
         requests=1
         if not re.fullmatch(r'[0-9a-f]{40}',commit):
             ref=json.loads(reader('https://api.github.com/repos/'+repo+'/git/ref/heads/'+quote(commit,safe=''),MAX_META,deadline));requests+=1
@@ -161,6 +165,9 @@ def inspect(task,catalog,method,reason,solves,dependencies,license_text,reader=f
         write(cache,result);return result
 
 def verify_file(f,data):
+    if 'sha256' in f:
+        if len(data)!=f['bytes'] or hashlib.sha256(data).hexdigest()!=f['sha256']:raise ValueError('实际文件大小或版本与用户审阅的提案不一致')
+        return
     if len(data)!=f['bytes'] or hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()!=f['git_blob_sha']:
         raise ValueError('实际文件大小或版本与用户审阅的提案不一致')
 
@@ -175,9 +182,11 @@ def require_install_approval(evidence):
 
 def install(proposal,task,proposal_hash,evidence,reader=fetch):
     p=validate(proposal)
-    if p['schema']!='sos-install-proposal-v1':raise ValueError('元景市场技能由宿主市场工具安装；随后 record-market 登记实际结果')
+    if p['schema'] not in ('sos-install-proposal-v1','sos-tencent-proposal-v1'):raise ValueError('元景市场技能由宿主市场工具安装；随后 record-market 登记实际结果')
     if proposal_hash!=digest(p):raise ValueError('安装提案已变化，原授权不能复用')
     require_install_approval(evidence)
+    if p['schema']=='sos-tencent-proposal-v1' and reader is fetch:
+        from tencent_source import fetch as reader
     root=Path(task).resolve()/'.sos-installed';root.mkdir(parents=True,exist_ok=True)
     target=root/proposal_hash
     with edit_lock(root/'install'):
@@ -229,11 +238,16 @@ def main():
     ap=argparse.ArgumentParser(description=__doc__);sub=ap.add_subparsers(dest='action',required=True)
     s=sub.add_parser('inspect');s.add_argument('--task-dir',required=True)
     for key in ('catalog-url','method-url','reason','solves','dependencies','license'):s.add_argument('--'+key,required=True)
+    s=sub.add_parser('inspect-tencent');s.add_argument('--task-dir',required=True);s.add_argument('--slug',required=True)
+    for key in ('reason','solves','dependencies','license'):s.add_argument('--'+key,required=True)
     s=sub.add_parser('install');s.add_argument('proposal');s.add_argument('--task-dir',required=True);s.add_argument('--proposal-hash',required=True);s.add_argument('--evidence',required=True)
     s=sub.add_parser('market');s.add_argument('--metadata',required=True);s.add_argument('--out',required=True)
     s=sub.add_parser('record-market');s.add_argument('proposal');s.add_argument('--task-dir',required=True);s.add_argument('--proposal-hash',required=True);s.add_argument('--evidence',required=True);s.add_argument('--method-file',required=True);s.add_argument('--record',required=True)
     a=ap.parse_args()
     if a.action=='inspect':r=inspect(a.task_dir,a.catalog_url,a.method_url,a.reason,a.solves,a.dependencies,a.license)
+    elif a.action=='inspect-tencent':
+        from tencent_source import inspect as inspect_tencent
+        r=inspect_tencent(a.task_dir,a.slug,a.reason,a.solves,a.dependencies,a.license)
     elif a.action=='market':
         p=validate(json.loads(Path(a.metadata).read_text()))
         if p['schema']!='sos-market-proposal-v1':raise ValueError('需要元景市场提案格式')

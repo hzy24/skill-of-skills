@@ -1,28 +1,40 @@
 # 专业能力发现与安装
 
-先核对最相关的已启用技能。缺口仅从元景市场和 Claude SkillHub（https://claudeskillhub.com）寻找。搜索命中其他域名时忽略该结果；渠道不可访问时如实记录限制，保留能力缺口。
+本版新能力检索统一使用腾讯 SkillHub（https://skillhub.cn）。Claude SkillHub 和元景市场检索暂时停用；已安装的专业能力仍参与适配比较。
 
-## 小范围检索与阅读
+## 实际搜索与选型
 
-`discover.py --draft draft.json --out search.json` 生成最多两轮请求。宿主使用实际市场/网页工具搜索，持久计时由 starter 开始。找到适配方法后停止扩展；五分钟到达后用已取得的方法编译或交付带缺口的方案。此阶段只查看输入画像，不做业务计算、起草或制作。
+按 find-skills 的思路，先提取任务意图、领域和具体判断方法，生成 2–4 个中英文关键词。同义词、上位方法词分别查询；避免把整段用户需求作为唯一查询。已安装专业能力与检索候选一起比较。用户熟悉专业术语时直接采用其术语扩展检索。
 
-进入 Claude SkillHub 真实详情页，跟随仓库链接定位具体 Skill 的 SKILL.md 。文件链接可以包含分支，程序将其解析为固定 commit。每个候选最多两种定位尝试；遇到访问限制就保留缺口，不循环猜路径。GitHub 只追溯已确定的候选。Claude SkillHub 包含订阅技能；详情页没有公开原文或下载元数据时记录访问限制，不能默认免费开源，也不能猜测 GitHub 仓库。此时可先交付带缺口的方案，用户提供合法取得的原文和包后再核验。
-
-候选获取统一使用：
+腾讯 SkillHub 使用官方公开 API，直接运行：
 
 ```sh
-python <skill>/scripts/acquire.py inspect --task-dir <任务目录> --catalog-url <ClaudeSkillHub详情HTTPS链接> --method-url <GitHub具体技能SKILL.md文件链接> --reason '原文或样例显示的适配优势' --solves '本任务交给它解决的问题' --dependencies '运行依赖及额外下载需求；未知写待核验' --license '已核实许可或待核验'
+python <skill>/scripts/search_skills.py '<领域方法中文词>' '<对应英文词>' --task-dir <任务目录> --out <任务目录>/skill-search.json
 ```
 
-程序核对详情页实际仓库链接，只读原文和目录元数据，返回 method_file、proposal 与 proposal_hash。单个响应上限 256 KiB；每候选最多 12 次目录请求、60 秒；同一任务最多三个新候选请求，共享五分钟检索预算。相同请求复用经过版本检查的本地原文与提案，避免重复下载。它不下载归档、不 clone、不运行安装脚本。遇到限制交付缺口，不改用 curl/wget、其他目录站或整仓库下载绕过入口。
+程序实际请求平台并返回候选名称、描述、详情链接、版本与热度，按 slug 去重，记录每次请求状态、耗时并缓存。腾讯使用 keyword 分词检索；平台 score 是综合排序分，stars 是平台收藏数。按专业适配程度筛选，热度用于同等适配下比较。只发送方法关键词，业务附件和内部数据留在当前任务。
 
-`method_source.py <返回的method_file>` 获取章节 ID。只选影响适配的章节，解释本任务的用途、输入条件与限制。通用库可用性、排名和星数不能代替方法证据；维护、热度与样例必须来自实际观察。
+首轮结果少或不相关时，去掉过窄分类、换英文或同义/上位方法词再次搜索；结果多时用 --category 收窄。每次最多四词、每词十项，同一任务最多八次真实 API 请求，共享五分钟规划时钟。宿主把两轮中的最相关候选合并，细读最多三个。
+
+读取候选原文后，以本任务的核心判断筛选：方法提供哪些判断步骤、适用条件、重点对象和检查依据？这些方法是否适用于现有材料？把结论写入已有 fit_reason / input_fit，再按方法组织委托。名称、领域标签与通用分析流程只用于召回。一次关键词没命中就换词继续；接口错误按渠道回退，不把访问失败写成“没有专业技能”。
+
+## 读取原文与准备安装
+
+腾讯候选由官方版本和文件接口直接读取，无需它具有 GitHub 仓库：
+
+```sh
+python <skill>/scripts/acquire.py inspect-tencent --task-dir <任务目录> --slug <搜索返回的slug> --reason '方法适配理由' --solves '解决的具体判断' --dependencies '实际依赖' --license '原文许可信息或待核实'
+```
+
+程序读取详情、固定版本文件清单及 SKILL.md，逐文件记录大小和 SHA256，返回 method_file、proposal、proposal_hash。此时只读取方法；用户授权后才安装完整文件清单。单文件接口支持最大 1 MiB，方法入口读取上限 256 KiB；包上限 10 MiB、100 文件。下载使用官方文件接口及核实的腾讯对象存储域名。
+
+候选获取最多三个，共享规划计时并复用缓存。运行 `method_source.py <method_file>` 选取相关方法章节。先按任务契合程度筛选，再比较平台评分、下载量、适用条件和使用成本。
 
 ## 方案中的安装提案
 
 业务草案 skills 填 origin="external" 和 proposal 路径。程序将提案嵌入 plan.json，HTML 详情展示：
 
-- 准确技能名、Claude SkillHub 或元景市场真实详情链接、固定版本。
+- 准确技能名、腾讯 SkillHub 真实详情链接、固定版本。
 - 为什么选择、实际方法优势、解决的具体问题与未覆盖部分。
 - 下载字节数、文件数量和技能目录；运行依赖的额外下载、权限另列。
 - 安装范围及待用户确认状态。大小、许可或必要依赖未核实时，先补齐再安装。
@@ -37,19 +49,7 @@ python <skill>/scripts/acquire.py inspect --task-dir <任务目录> --catalog-ur
 python <skill>/scripts/acquire.py install <proposal.json> --task-dir <任务目录> --proposal-hash <返回值> --evidence '用户针对该技能的实际安装授权原话'
 ```
 
-只下载批准的文件清单，逐文件核对大小与 Git blob 版本；总上限 10 MiB、100 文件、120 秒。依赖单独核对授权，不执行远程脚本。失败清理临时目录；内容或版本变化须重新提案。安装到任务的 .sos-installed/。读取方法和必要配套资源后用 execute.py ready 核验，不手工修改 readiness。
-
-## 元景市场
-
-由宿主市场工具取得真实详情、版本、大小及依赖，将结果整理为 metadata.json：schema="sos-market-proposal-v1"，name、skill_id、version、catalog_url、download_bytes（已核实的字节整数；未提供填 null）、reason、solves、dependencies、license、metadata_evidence（实际工具结果引用）。运行 `acquire.py market --metadata metadata.json --out proposal.json`，在方案中展示。市场不提供大小时仍可生成提案，页面显示待核实，执行保持等待；从实际包元数据核实后更新提案，再申请具体安装授权，不能用 0 代替未知。
-
-获准后调用宿主市场安装工具，保存实际结果为 installation.log，再登记：
-
-```sh
-python <skill>/scripts/acquire.py record-market <proposal.json> --task-dir <任务目录> --proposal-hash <值> --evidence '用户具体授权原话' --method-file <实际已安装SKILL.md> --record <installation.log>
-```
-
-优先使用宿主实际暴露的市场工具；客户端 HTTP 接口是否能从当前沙箱访问需现场核对，不写死端口或猜测 API。SoS 保存宿主工具结果作为追溯依据。
+只下载批准的文件清单，逐文件核对大小与腾讯文件 SHA256；总上限 10 MiB、100 文件、120 秒。依赖单独核对授权，不执行远程脚本。失败清理临时目录；内容或版本变化须重新提案。安装到任务的 .sos-installed/。读取方法和必要配套资源后用 execute.py ready 核验，不手工修改 readiness。
 
 ## 用户改变任务后的新一轮
 

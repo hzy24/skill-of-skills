@@ -1,16 +1,16 @@
 # 专业委托与成果收尾
 
-收到“按方案执行”后读取任务目录最新 plan.json。HTML 保存不启动任务；页面保存失败先修复保存，执行以成功写回的版本为准。复核技能适配、安装与宿主入口，沿用真实会话授权。所有核心业务模块都须由专业 Skill 承担。
+收到“按方案执行”后读取任务目录最新 plan.json。HTML 保存不启动任务；页面保存失败先修复保存，执行以成功写回的版本为准。先核对 handoff.py 已登记附件交付，首次使用用户审阅后的执行原话；复核技能适配、安装与宿主入口。所有核心业务模块都须由专业 Skill 承担。
 
 ## 每个模块的公开命令
 
 ### 1. 交接
 
 ```
-python <skill>/scripts/execute.py open <任务目录>/plan.json --node N1 --evidence '用户在当前会话确认按最新方案执行'
+python <skill>/scripts/execute.py open <任务目录>/plan.json --node N1 --evidence '按方案执行'
 ```
 
-脚本读取当前方案，检查依赖与输入版本，初始化或协调 run.json，输出本模块的业务委托、所选方法、上游文件、receipt.json 路径和下一条完整命令。授权参数按实际会话填写；授权已登记后可省略。若返回 preparation_required，按返回的 ready 命令核验并登记，再次 open。外部技能先取得具体安装授权。不要读源码寻找准备字段，也不要根据 plan_hash 是否存在猜测方案是否编译。
+脚本读取当前方案，检查依赖与输入版本，初始化或协调 run.json，输出本模块的业务委托、所选方法、上游文件、receipt.json 路径和下一条完整命令。授权参数填写用户确认原话，不填写模型对初始任务的授权推断；授权已登记后可省略。needs_plan_delivery 时先交付并登记附件；awaiting_user_confirmation 时结束回复等待用户。若返回 preparation_required，按返回的 ready 命令核验并登记，再次 open。外部技能先取得具体安装授权。不要读源码寻找准备字段，也不要根据 plan_hash 是否存在猜测方案是否编译。
 
 按业务委托与真实 Skill 指令执行。成熟 Skill 自主安排内部分析、草稿、计算与修复；SoS 只管理范围、交接与成果标准。方法已在当前上下文读取且版本不变时直接采用；按需读取资源，避免重复全文加载。执行新专业方法前先确认它已绑定本模块。
 
@@ -76,4 +76,4 @@ python <skill>/scripts/execute.py audit <任务目录>/plan.json
 
 执行状态串行更新。新入口与 HTML 保存共用文件锁；旧 sos.py 状态命令留作兼容，不与新入口同时写账本。宿主结束后不宣称仍在监督任务。
 
-新方案的专业适配与成果实质审阅见 [复用的方法与审阅](composed-methods.md)。open 返回 needs_method_review 时按返回命令重开适配表，不能用 ready 绕过。实际采用的辅助技能也要进入分工；submit 的 --trace 可接宿主真实工具调用列表。
+新方案的专业适配与计划履约核对见 [方法适配与计划履约](composed-methods.md)。open 返回 needs_method_review 时按返回命令重开适配表，不能用 ready 绕过。实际采用的辅助技能也要进入分工；submit 的 --trace 可接宿主真实工具调用列表。

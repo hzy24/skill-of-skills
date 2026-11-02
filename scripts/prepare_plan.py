@@ -154,6 +154,7 @@ def main():
         try:
             sos.save(draft.parent/'.sos-planning'/('attempt-'+str(attempt['number'])+'.json'),value)
             p['review_protocol_version']=2
+            p['handoff_protocol_version']=1
             p['planning_summary']=dict(attempt=attempt['number'],elapsed_seconds=round(time.time()-state['started_epoch'],1),
                                        unresolved_core=[n['id'] for n in p['capability_needs'] if n.get('role')=='core' and n['decision'].get('fit')!='supported'])
             readiness=assess(p)

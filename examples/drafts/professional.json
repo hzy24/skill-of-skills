@@ -1,0 +1,158 @@
+{
+  "id": "software-repair",
+  "title": "合成示例：按专业流程修复空白输入",
+  "goal": "空白输入返回空列表，保留原有整数和负数解析，交付修复文件与验证记录。",
+  "requirements": [
+    {
+      "id": "R1",
+      "text": "空字符串与纯空白返回空列表；逗号分隔整数和负数保持兼容，不静默忽略非法非空条目。"
+    }
+  ],
+  "materials": [
+    {
+      "id": "original",
+      "title": "不可变原始代码",
+      "path": "repair-skill/original_parser.py"
+    },
+    {
+      "id": "validator",
+      "title": "三个回归测试",
+      "path": "repair-skill/check_parser.py"
+    },
+    {
+      "id": "method",
+      "title": "自写的合成测试技能说明",
+      "path": "repair-skill/SKILL.md"
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "fixed_source",
+      "title": "修复后的代码",
+      "description": "独立工作副本",
+      "format": "py",
+      "outline_ids": [
+        "B1"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "N1",
+      "title": "按完整修复流程处理空输入",
+      "description": "修复空白输入失败，保留整数、负数和非法非空条目的既有行为，交付独立工作副本与验证记录。",
+      "reason": "修复技能自身包含诊断与测试，整体调用保留流程。",
+      "method": "skill",
+      "inputs": [
+        "original",
+        "validator",
+        "method"
+      ],
+      "outputs": [
+        "fixed_source"
+      ],
+      "requirements": [
+        "R1"
+      ],
+      "outline_ids": [
+        "B1"
+      ],
+      "checks": [
+        {
+          "kind": "review",
+          "id": "behavior",
+          "artifact": "fixed_source",
+          "criteria": "核对空串、纯空白、整数、负数及非法非空项行为；检查实际测试记录和修改范围，原始输入保持不变。"
+        }
+      ],
+      "bindings": [
+        {
+          "skill": "parser-repair-fixture",
+          "scope": "完整修复与验证流程",
+          "reason": "测试夹具提供此解析器的修复方法与检查入口",
+          "candidate_id": "fixture",
+          "contract": {
+            "inherit": "node",
+            "invocation": "由宿主读取样例 Skill 后在工作副本执行完整修复流程"
+          }
+        }
+      ],
+      "capability_need_ids": [
+        "repair"
+      ]
+    }
+  ],
+  "capability_needs": [
+    {
+      "id": "repair",
+      "requirement_ids": [
+        "R1"
+      ],
+      "standard": "准确修复空白输入，保留非空行为与版本证据",
+      "existing_assessment": "读取本仓库自写测试 Skill 和三个用例，可支持该合成问题；环境待核验。",
+      "outline_ids": [
+        "B1"
+      ],
+      "decision": {
+        "kind": "skill",
+        "candidate_id": "fixture",
+        "fit": "supported",
+        "reason": "夹具明确边界条件和测试方式",
+        "application": "采用整体诊断修复流程；将原生测试未覆盖的非法项列入独立行为审阅。"
+      },
+      "task_kind": "professional"
+    }
+  ],
+  "capability_candidates": [
+    {
+      "id": "fixture",
+      "name": "parser-repair-fixture",
+      "source": "repair-skill/SKILL.md",
+      "version": "fixture-v1",
+      "license": "本仓库自写测试夹具，随项目使用",
+      "evidence": [
+        {
+          "kind": "method",
+          "locator": "repair-skill/SKILL.md#完整流程",
+          "finding": "空白入口、保留整数转换、独立副本和测试覆盖均有说明"
+        }
+      ],
+      "setup": {
+        "status": "blocked",
+        "dependencies": "Python 3 和随包测试文件",
+        "permissions": "本地读取快照，写入工作副本，运行测试",
+        "verification": "示例未在当前宿主核验；执行前核对解释器和测试入口"
+      },
+      "method_support": {
+        "material_id": "method",
+        "workflow": "在副本复现空输入，修复入口并保持非空转换行为",
+        "checks": "执行随包回归测试并核对非法非空项仍报错"
+      }
+    }
+  ],
+  "professional_task": true,
+  "content_outline": [
+    {
+      "id": "B1",
+      "title": "空输入如何与非法条目区分？",
+      "claim": "仅整体空白输入返回空列表；非空输入保留既有转换行为。",
+      "points": [
+        "原始解析器的空白输入失败需要修复。",
+        "完整流程负责定位与实现；兼容整数、负数，非法非空条目继续报错。"
+      ],
+      "sources": [
+        "original#parse",
+        "method#完整流程",
+        "validator#ParserTest"
+      ],
+      "visual": "交付独立源码文件，测试记录保留实际用例数与退出状态。",
+      "acceptance": [
+        "三个回归用例实际执行并通过",
+        "非法非空条目仍抛出 ValueError",
+        "原始输入保持不变"
+      ]
+    }
+  ],
+  "capability_policy": "skills_first",
+  "capability_policy_version": 2
+}

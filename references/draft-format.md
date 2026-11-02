@@ -10,4 +10,4 @@ role=core 对应用户核心目的；support 为配套交付；basic 为基础�
 
 编译器生成 ID、需求、引用、依赖、绑定和检查字段。业务草案不填写 bindings、contract、readiness 或 fallback_authorization。版本、许可和依赖未知时保持待核对。已安装能力填 origin="installed"；外部能力填 origin="external"、proposal="受控获取的提案路径"。执行前用 execute.py ready 登记真实入口和依赖验证；旧 plan 可继续读取、编辑与检查。
 
-当前规划 CLI 为新方案启用 review_protocol_version=2，自动生成适配审阅表；业务草案无需填写这一字段。旧方案继续兼容原协议；采用新检查时运行 `method_review.py open plan.json` 升级并完成适配审阅，后续 capture 会生成实质审阅字段。
+当前规划 CLI 为新方案启用 review_protocol_version=2，自动生成适配审阅表；业务草案无需填写这一字段。旧方案继续兼容原协议；采用新检查时运行 `method_review.py open plan.json` 升级并完成适配审阅，后续 capture 会生成技能调用与计划交付核对字段。

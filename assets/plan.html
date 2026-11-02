@@ -1,14 +1,15 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Skill of Skills · 任务路线</title></head><body>
 <!-- WIDGET_START -->
 <style>
-.sos{--ink:#263c35;--muted:#6b7f76;--line:#dce6de;--green:#276449;--paper:#fff;color:var(--ink);font:14px/1.55 system-ui,-apple-system,"PingFang SC",sans-serif;max-width:980px;margin:auto}
+.sos{--ink:#30263d;--muted:#80728b;--line:#e8e0ee;--accent:#77519d;--paper:#fff;color:var(--ink);font:14px/1.55 system-ui,-apple-system,"PingFang SC",sans-serif;max-width:980px;margin:auto;padding:8px 16px;background:linear-gradient(145deg,#faf7fd 0%,#fff 48%,#fdf6fa 100%);border-radius:20px}
 .sos *{box-sizing:border-box}
 .sos button,.sos input,.sos textarea,.sos select{font:inherit}
 .sos button{cursor:pointer;color:inherit;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:7px 11px}
-.sos button:hover{border-color:var(--green);background:#f0f7ef}
+.sos button:hover{border-color:var(--accent);background:#f6effa}
 .sos button:disabled{cursor:default;opacity:.55}
-.sos .primary{background:var(--green);color:white;border-color:var(--green)}
-.sos :focus-visible{outline:2px solid #6d9b7f;outline-offset:3px}
+.sos .primary{background:var(--accent);color:white;border-color:var(--accent);box-shadow:0 3px 8px #77519d18}
+.sos .primary:hover{background:#644184;border-color:#644184;color:white}
+.sos :focus-visible{outline:2px solid #a17cbe;outline-offset:3px}
 .sos .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:14px 0;border-bottom:1px solid var(--line)}
 .sos h1{font-size:17px;font-weight:600;line-height:1.4;margin:0;flex:1;min-width:160px}
 .sos .version{color:var(--muted);font-size:12px}
@@ -18,7 +19,7 @@
 .sos .flow{position:relative;display:flex;flex-direction:column;gap:34px;min-width:0}
 .sos .row{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;position:relative;z-index:1}
 .sos .node{position:relative;flex:0 1 300px;min-width:200px;width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;padding:15px 42px 15px 16px;outline-offset:3px}
-.sos .node:hover,.sos .node:focus-within{border-color:#719b7c;background:#f8fbf6}
+.sos .node:hover,.sos .node:focus-within{border-color:#b99acb;background:#fcf9fe}
 .sos .node.deleted{opacity:.55;border-style:dashed}
 .sos .node.deleted strong{text-decoration:line-through}
 .sos .node small{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
@@ -28,57 +29,82 @@
 .sos .outline-list{margin:10px 0 0;padding:8px 0 0;border-top:1px solid var(--line);display:grid;gap:5px}
 .sos .outline-item{display:block;width:100%;text-align:left;font-size:12px;padding:5px 7px;line-height:1.5}
 .sos .binding{margin-top:8px;font-size:12px;overflow-wrap:anywhere}
-.sos .status{display:inline-block;border-radius:5px;padding:1px 5px;margin-left:4px;background:#edf6ed;color:#356647;font-size:11px}
-.sos .status.pending{background:#fbf1da;color:#896122}
+.sos .status{display:inline-block;border-radius:5px;padding:1px 5px;margin-left:4px;background:#f1eafa;color:#6c488f;font-size:11px}
+.sos .status.pending{background:#f8eaf1;color:#96516f}
 .sos .edges{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:0}
 .sos .notice{font-size:12px;line-height:1.5;color:var(--muted);padding:8px 0;white-space:pre-wrap}
-.sos .notice.error{color:#a54330}
+.sos .notice.error{color:#a1385e}
 .sos .bottom{border-top:1px solid var(--line);padding:12px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .sos .bottom .hint{flex:1;margin:0}
-.sos .tip{position:fixed;z-index:1000;width:min(360px,calc(100vw - 24px));max-height:65vh;overflow:auto;padding:16px;border:1px solid #b9cdbd;border-radius:12px;background:#f4f8f1;pointer-events:auto;font-size:13px}
+.sos .tip{padding:8px 22px 24px;font-size:13px;line-height:1.7}
 .sos .tip h2{font-size:15px;margin:0 0 10px;font-weight:600}
 .sos .tip p{margin:7px 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .sos .tip b{font-weight:600}
 .sos [hidden]{display:none!important}
 .sos dialog{color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:88vh;border:1px solid var(--line);border-radius:14px;background:#fff;padding:0;overflow:auto}
-.sos dialog::backdrop{background:#172b244d}
+.sos dialog::backdrop{background:#30203f4d}
 .sos .modal-head{position:sticky;top:0;z-index:2;background:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}
 .sos h2{font-size:17px;font-weight:600;margin:0}
 .sos .modal-body{padding:4px 20px 20px}
 .sos label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px}
-.sos input,.sos textarea,.sos select{width:100%;border:1px solid var(--line);border-radius:7px;padding:9px;color:var(--ink);background:#fcfdfb}
+.sos input,.sos textarea,.sos select{width:100%;border:1px solid var(--line);border-radius:7px;padding:9px;color:var(--ink);background:#fdfbfe}
 .sos textarea{min-height:75px;resize:vertical}
 .sos .dep{display:flex;gap:8px;align-items:center;margin:7px 0;color:var(--ink)}
 .sos .dep input{width:auto}
 .sos .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
-.sos .danger{color:#a84335}
+.sos .danger{color:#a1385e}
 .sos .bind-edit{border:1px solid var(--line);padding:10px;border-radius:8px;margin:12px 0}
-.sos summary{cursor:pointer;color:var(--green);font-size:12px;margin:14px 0}
+.sos summary{cursor:pointer;color:var(--accent);font-size:12px;margin:14px 0}
 .sos .details-list{font-size:13px}
-.sos .error-text{font-size:12px;color:#a54330;white-space:pre-wrap}
+.sos .error-text{font-size:12px;color:#a1385e;white-space:pre-wrap}
 .sos #extraTools{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:520px){.sos .bar{align-items:flex-start}
 .sos h1{flex-basis:100%;font-size:16px}
 .sos .node{flex-basis:100%;max-width:350px}
 .sos .canvas{padding:20px 2px}
-.sos .tip{max-height:55vh}
+
 .sos .tools button{font-size:12px}
 }
 @media print{.sos .tools,.sos .bottom,.sos .pencil,.sos .notice,.sos .hint,.sos .tip{display:none!important}
 .sos .node{break-inside:avoid}
 }
 
+
+.sos .node{flex-basis:440px;max-width:500px;border-radius:16px;padding:20px 22px;background:#fff;box-shadow:0 3px 14px #56347308}
+.sos .node strong{font-size:17px;padding-right:20px}
+.sos .node small{letter-spacing:.04em;margin-bottom:9px}
+.sos .node:hover{background:#fff}
+.sos .binding{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:12px}
+.sos .skill-name{font-size:12px;color:var(--accent);text-decoration:none;overflow-wrap:anywhere}
+.sos a:hover{text-decoration:underline}
+.sos .status{margin:0;padding:3px 7px;border-radius:6px;white-space:nowrap}
+.sos .node-footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sos .output-summary{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.sos .detail-button{font-size:12px;white-space:nowrap;border:0;padding:5px 0;color:var(--accent);background:transparent}
+.sos #detailDialog{width:min(620px,calc(100vw - 24px));box-shadow:0 18px 80px #4c2b6830}
+.sos .tip .skill-detail{background:#f8f3fb;border-radius:10px;padding:14px 16px;margin:12px 0}
+.sos .skill-detail>a{display:block;margin:12px 0}
+.sos .tip h3{font-size:13px;margin:16px 0 8px}
+.sos .tip ul{padding-left:20px}
+.sos .tip li{margin:6px 0}
+.sos .detail-tabs{display:flex;gap:6px;margin:10px 0 18px;padding:4px;background:#f4eff7;border-radius:10px}
+.sos .detail-tabs button{flex:1;border:0;background:transparent;font-size:12px;padding:8px}
+.sos .detail-tabs button[aria-pressed="true"]{background:white;box-shadow:0 1px 5px #57306b12;color:var(--accent);font-weight:600}
+.sos .tip a{color:var(--accent);font-weight:600}
+.sos .modal-head button{font-size:20px;line-height:1;border:0}
+@media(max-width:520px){.sos .node{max-width:none;padding:18px}.sos .node strong{font-size:16px}.sos .node-footer{align-items:flex-start}.sos .bar{padding:12px 0}.sos dialog{max-height:90vh}}
+
 </style>
 <div class="sos" id="sos-root">
  <div class="bar"><h1 id="title">任务路线</h1><span id="version" class="version"></span><div class="tools"><button id="persist" class="primary">保存修改</button><button id="requirementsButton">调整需求</button><button id="moreButton" aria-label="更多选项">···</button></div></div>
  <div id="extraTools" hidden><button id="save">导出备份</button><button id="import">导入方案</button><button id="print">打印</button><button id="add">添加模块</button></div>
- <p class="hint">悬停查看说明 · 点击铅笔编辑 · 连线表示前后依赖</p>
+ <p class="hint">点击查看详情 · 铅笔编辑模块 · 保存后在对话中确认执行</p>
  <p id="readiness" class="notice" role="status"></p>
  <div class="canvas"><div id="flow" class="flow"></div></div>
  <div id="notice" class="notice" role="status" aria-live="polite"></div>
  <div class="bottom" id="handoff"><span id="syncState" class="hint"></span></div>
- <div id="tip" class="tip" role="tooltip" hidden></div>
- <dialog id="nodeDialog" aria-labelledby="editorTitle"><div class="modal-head"><h2 id="editorTitle">编辑模块</h2><button data-close="nodeDialog" aria-label="关闭模块编辑">×</button></div><div class="modal-body"><label for="ntitle">模块名称</label><input id="ntitle"><label for="description">工作说明</label><textarea id="description"></textarea><label for="reason">安排理由</label><textarea id="reason"></textarea><label for="method">执行方式</label><select id="method"><option value="direct">原生能力</option><option value="skill">调用技能</option><option value="human">用户判断</option></select><label>需要先完成的模块</label><div id="deps"></div><label for="done">完成标准 · 每行一项</label><textarea id="done"></textarea><div id="bindingEditor"></div><p class="hint">调整能力后，Agent 会重新核验可用条件。依赖和产物检查也会随方案重新核对。</p><p id="editError" class="error-text" role="alert"></p><div class="actions"><button id="applyNode" class="primary">完成编辑</button><button id="remove" class="danger">删除模块</button></div></div></dialog>
+ <dialog id="detailDialog" aria-labelledby="detailTitle"><div class="modal-head"><h2 id="detailTitle">模块详情</h2><button data-close="detailDialog" aria-label="关闭模块详情">×</button></div><div id="tip" class="tip"></div></dialog>
+ <dialog id="nodeDialog" aria-labelledby="editorTitle"><div class="modal-head"><h2 id="editorTitle">编辑模块</h2><button data-close="nodeDialog" aria-label="关闭模块编辑">×</button></div><div class="modal-body"><label for="ntitle">模块名称</label><input id="ntitle"><label for="description">工作说明</label><textarea id="description"></textarea><label for="reason">安排理由</label><textarea id="reason"></textarea><label for="method">执行方式</label><select id="method"><option value="direct">原生能力</option><option value="skill">调用技能</option><option value="human">用户判断</option></select><label>需要先完成的模块</label><div id="deps"></div><label for="done">完成标准 · 每行一项</label><textarea id="done"></textarea><div id="bindingEditor"></div><div id="singleContentEditor"></div><p class="hint">调整能力后，Agent 会重新核验可用条件。依赖和产物检查也会随方案重新核对。</p><p id="editError" class="error-text" role="alert"></p><div class="actions"><button id="applyNode" class="primary">完成编辑</button><button id="remove" class="danger">删除模块</button></div></div></dialog>
  <dialog id="requirementsDialog" aria-labelledby="requirementsTitle"><div class="modal-head"><h2 id="requirementsTitle">需求与交付</h2><button data-close="requirementsDialog" aria-label="关闭需求编辑">×</button></div><div class="modal-body"><label for="ptitle">方案名称</label><input id="ptitle"><label for="pgoal">任务目标</label><textarea id="pgoal"></textarea><div id="requirements"></div><label for="pmode">使用方式</label><select id="pmode"><option value="execute_after_confirmation">确认后执行</option><option value="plan_only">仅供规划参考</option></select><label>预期交付</label><div id="outputs" class="details-list"></div><p id="requirementsError" class="error-text" role="alert"></p><div class="actions"><button id="applyRequirements" class="primary">完成编辑</button></div><details><summary>高级：编辑完整方案</summary><textarea id="raw" rows="12" spellcheck="false" aria-label="完整方案 JSON"></textarea><button id="applyRaw">应用完整方案</button></details></div></dialog>
  <dialog id="outlineDialog" aria-labelledby="outlineTitle"><div class="modal-head"><h2 id="outlineTitle">编辑内容</h2><button data-close="outlineDialog" aria-label="关闭内容编辑">×</button></div><div class="modal-body"><div id="outlineFields"></div><p id="outlineError" class="error-text" role="alert"></p><div class="actions"><button id="applyOutline" class="primary">完成编辑</button><button id="outlineUp">上移</button><button id="outlineDown">下移</button><button id="removeOutline" class="danger">删除内容项</button></div></div></dialog>
  <input id="file" type="file" accept=".json,application/json" hidden>
@@ -92,12 +118,12 @@
 
 const root=document.getElementById('sos-root'),$=id=>root.querySelector('#'+id),clone=x=>JSON.parse(JSON.stringify(x));
 
-let base=JSON.parse($('plan-data').textContent),plan=clone(base),selected=plan.nodes[0]?.id,pending=false,hoverTimer,removed=[],editingOutline=null;
+let base=JSON.parse($('plan-data').textContent),plan=clone(base),selected=plan.nodes[0]?.id,pending=false,removed=[],editingOutline=null;
 
 const names={
 direct:'原生能力',skill:'调用技能',human:'用户判断'}
 ,readyNames={
-ready:'已可用 · 无需安装',unknown:'是否需安装待核验',needs_setup:'需安装或配置'}
+ready:'运行条件已核验',unknown:'执行前进行环境检查',needs_setup:'安装后检查运行条件'}
 ;
 
 const bridge=()=>typeof window.skillOfSkillsStorage?.save==='function';
@@ -210,78 +236,75 @@ function nodeOutlineIds(n){
 const specific=[...new Set([...plan.deliverables.filter(d=>n.outputs.includes(d.id)).flatMap(d=>d.outline_ids||[]),...(n.outline_ids||[])])];
 return specific.length?specific:[...new Set((plan.capability_needs||[]).filter(x=>(n.capability_need_ids||[]).includes(x.id)).flatMap(x=>x.outline_ids||[]))]}
 
+function installationStatus(c,b){
+ if(b&&c&&b.skill!==c.name)return {label:'技能已更换',ready:false,detail:'保存后按新技能核对安装情况'};
+ if(c?.setup?.status==='available')return {label:'已安装',ready:true,detail:'入口及运行条件已核验'};
+ if(c?.origin==='installed')return {label:'已安装',ready:true,detail:'方案已记录本机技能及原文；运行环境检查未完成'};
+ if(c?.origin==='external')return {label:'未安装 · '+(c.setup?.status==='approved'?'已授权安装':'需你授权'),ready:false,detail:'已选定专业技能，安装信息见下方'};
+ return {label:'安装信息缺失',ready:false,detail:'当前方案没有记录技能安装情况，需补齐环境检查结果'};
+}
+function skillLink(c){
+ const value=c?.acquisition?.catalog_url||c?.source||'';
+ try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password?url.href:null}catch{return null}
+}
 function hideTip(){
-clearTimeout(hoverTimer);
-$('tip').hidden=true}
+ if($('detailDialog').open)$('detailDialog').close();
+}
 
 function showTip(n,target){
-clearTimeout(hoverTimer);
-let tip=$('tip');
-tip.replaceChildren(el('h2',n.title));
-const line=(label,value,parent=tip)=>{
-let p=el('p');
-p.append(el('b',label+'：'),document.createTextNode(value||'无'));
-parent.append(p)}
-;
-line('工作说明',n.description);
-if(plan.constraints?.length)line('判断边界',plan.constraints.map(x=>typeof x==='string'?x:JSON.stringify(x)).join('；'));
-if(plan.assumptions?.length)line('采用的假设',plan.assumptions.map(x=>typeof x==='string'?x:JSON.stringify(x)).join('；'));
-if(plan.open_questions?.length)line('待确认事项',plan.open_questions.map(x=>typeof x==='string'?x:JSON.stringify(x)).join('；'));
-if(plan.selection_needs_review)line('能力选择','方案已修改，执行前将重新核验。');
-for(const need of (plan.capability_needs||[]).filter(x=>(n.capability_need_ids||[]).includes(x.id))){
-line('交付要求',need.standard);line('现有能力评估',need.existing_assessment);
-if(need.gap)line('需要补齐',need.gap);
-if(need.discovery)line('检索结果',need.discovery.evidence||'待检索');
-const d=need.decision||{},c=(plan.capability_candidates||[]).find(x=>x.id===d.candidate_id);
-line('采用方式',({skill:'调用专业能力',reference:'采用专业方法参考',direct:'原生处理',deferred:'能力缺口待解决'})[d.kind]||'待评估');
-if(d.direct_basis){line('原生处理依据',d.direct_basis.reason);line('覆盖与限制',(d.direct_basis.coverage||'')+'；'+(d.direct_basis.limitations||''));}
-line('选择理由',d.reason||'待评估');line('如何影响任务',d.application||'待核验');
-if(need.method_evidence){const detail=el('details');detail.append(el('summary','采用的方法原文'),el('p',need.method_evidence.excerpt));tip.append(detail);}
-if(d.fallback_limit)line('当前未覆盖',d.fallback_limit);
-if(c){line('候选来源',c.name+'；'+c.source+'；版本：'+c.version+'；许可：'+c.license);
-if(c.acquisition){const a=c.acquisition,card=el('section');
-tip.insertBefore(card,tip.children[2]||null);
-line('推荐安装的技能',a.name,card);
-if(/^https:\/\//.test(a.catalog_url)){const link=el('a',a.schema==='sos-market-proposal-v1'?'查看元景市场详情':'查看 Claude SkillHub 详情');link.href=a.catalog_url;link.target='_blank';link.rel='noopener noreferrer';card.append(link);}
-line('为什么适合',a.reason,card);line('解决的问题',a.solves,card);
-line('下载大小',a.download_bytes==null?'待核实；补齐后再申请安装授权':a.download_bytes+' 字节（'+(a.download_bytes/1048576).toFixed(2)+' MiB）'+(a.files?'，'+a.files.length+' 个文件':'')+'；依赖另列',card);
-line('运行依赖',a.dependencies,card);
-line('安装范围',(a.directory||a.skill_id)+' · 固定版本 '+(a.commit||a.version),card);line('安装确认',a.download_bytes==null?'先核实下载大小，再提出具体安装请求。':'请在对话中明确同意安装上述技能；保存方案及普通执行确认均不会授权安装。',card);}
-line('适配依据',(c.evidence||[]).map(e=>e.finding+'（'+e.locator+'）').join('；'));
-const fitReview=(plan.professional_review?.items||[]).find(x=>x.need===need.id);
-line('适配状态',plan.review_protocol_version===2?(fitReview?.verdict==='pass'?'已完成本次专业适配审阅':fitReview?.verdict==='fail'?'适配未通过':'原文引用已核对，专业适配待审阅'):({supported:'已有依据支持，效果按交付标准检查',unverified:'待验证',insufficient:'覆盖不足'})[d.fit]||'待核验');
-if(fitReview){line('适配审阅',fitReview.reason);line('输入依据',fitReview.input_basis);line('判断边界',fitReview.limits);}
-const setup=c.setup||{};line('安装状态',c.origin==='external'&&c.setup?.status!=='available'&&c.acquisition?.download_bytes==null?'下载大小待核实':({available:'当前环境已核验可用',approval_needed:'建议安装，等待授权',approved:'安装已获授权，待完成验证',blocked:'入口与依赖待核验，具体条件见说明'})[setup.status]||'待核验');
-if(setup.installation)line('安装来源、版本和目标',setup.installation);
-if(setup.request_reason)line('安装理由',setup.request_reason);
-if(setup.dependencies)line('依赖',setup.dependencies);
-if(setup.permissions)line('所需权限',setup.permissions);
-if(setup.fallback)line('暂不安装时',setup.fallback);
-}}
-
-line('安排依据',n.reason);
-line('输入',n.inputs.map(artifactName).join('、'));
-line('输出',n.outputs.map(artifactName).join('、'));
-line('依赖',n.depends_on.map(id=>plan.nodes.find(x=>x.id===id).title).join('、'));
-line('完成标准',n.done_when.join('；'));
-line('检查方式',n.checks.map(c=>({
-native:'专业技能原生验证',file:'文件存在且非空',review:'内容审阅',csv_columns:'表格列核对',pptx_pages:'汇报页数',text_contains:'关键内容核对'}
-[c.kind]||c.kind)+(c.criteria?'：'+c.criteria:'')).join('；'));
-for(const b of n.bindings){
-line('调用能力',b.skill+'；'+b.scope+'；'+readyNames[b.readiness]+'。'+b.reason);
-if(b.contract){
-if(b.contract.planning_effect)line('能力带来的安排',b.contract.planning_effect);
-line('使用方式',b.contract.mode==='branch'?'指定工作分支':'完整流程');
-line('前置条件',(b.contract.prerequisites||[]).map(r=>r.requirement+'（'+(r.status==='verified'?'已核验':'待核验')+'）').join('；')||'无额外条件');
-line('随能力执行的检查',(b.contract.required_checks||[]).map(c=>c.criteria||c.kind).join('；'));
-}}
-
-tip.hidden=false;
-let r=target.getBoundingClientRect(),below=innerHeight-r.bottom-19,above=r.top-19,showAbove=below<260&&above>below;
-tip.style.maxHeight=Math.max(70,Math.min(innerHeight*.65,showAbove?above:below))+'px';
-let w=tip.offsetWidth,h=tip.offsetHeight;
-tip.style.left=Math.max(12,Math.min(r.left,innerWidth-w-12))+'px';
-tip.style.top=Math.max(12,showAbove?r.top-h-7:r.bottom+7)+'px'}
+ const tip=$('tip');tip.replaceChildren();$('detailTitle').textContent=n.title;
+ const panels={},tabs=el('div',undefined,'detail-tabs');
+ for(const [key,label] of [['work','任务内容'],['skills','技能与安装'],['outputs','交付与检查']]){
+  const button=el('button',label);button.dataset.panel=key;button.setAttribute('aria-pressed',key==='work'?'true':'false');
+  const panel=el('section',undefined,'detail-panel');panel.id='panel-'+key;panel.hidden=key!=='work';button.setAttribute('aria-controls',panel.id);
+  button.onclick=()=>{for(const [id,p] of Object.entries(panels))p.hidden=id!==key;for(const b of tabs.children)b.setAttribute('aria-pressed',String(b===button));};
+  tabs.append(button);panels[key]=panel;
+ }
+ tip.append(tabs,...Object.values(panels));
+ const line=(parent,label,value)=>{if(!value)return;const p=el('p');p.append(el('b',label+'：'),document.createTextNode(value));parent.append(p);};
+ const list=(parent,label,values)=>{if(!values?.length)return;parent.append(el('h3',label));const ul=el('ul');for(const v of values)ul.append(el('li',v));parent.append(ul);};
+ const text=x=>typeof x==='string'?x:JSON.stringify(x);
+ line(panels.work,'要完成什么',n.description);
+ line(panels.work,'输入材料',n.inputs.map(artifactName).join('、'));
+ line(panels.work,'先完成',n.depends_on.map(id=>plan.nodes.find(x=>x.id===id)?.title||id).join('、')||'可直接开始本模块');
+ if(n.reason&&n.reason!==n.description)line(panels.work,'这样安排的原因',n.reason);
+ const ids=nodeOutlineIds(n);
+ for(const id of ids){const item=plan.content_outline.find(o=>o.id===id);if(!item)continue;
+  const more=el('details');more.append(el('summary',ids.length>1?item.title:'具体问题与内容要求'));
+  line(more,'内容目标',item.claim);list(more,'内容要点',item.points);list(more,'资料依据',item.sources);line(more,'呈现方式',item.visual);list(more,'验收要求',item.acceptance);panels.work.append(more);
+ }
+ if(plan.constraints?.length||plan.assumptions?.length||plan.open_questions?.length){
+  const more=el('details');more.append(el('summary','范围、口径与需要确认的事项'));
+  list(more,'范围与口径',plan.constraints?.map(text));list(more,'采用的假设',plan.assumptions?.map(text));list(more,'需要确认',plan.open_questions?.map(text));panels.work.append(more);
+ }
+ for(const binding of n.bindings){
+  const candidate=(plan.capability_candidates||[]).find(c=>c.id===binding.candidate_id),status=installationStatus(candidate,binding),url=skillLink(candidate);
+  const box=el('div',undefined,'skill-detail');box.append(el('h3',binding.skill),el('span',status.label,'status'+(status.ready?'':' pending')));
+  if(url){const link=el('a','打开技能主页 ↗');link.href=url;link.target='_blank';link.rel='noopener noreferrer';box.append(link);
+   // Keep a visible source link in the work view as well.
+   const quick=link.cloneNode(true);quick.textContent=binding.skill+' ↗';panels.work.append(quick);}
+  line(box,'负责工作',binding.scope);line(box,'选择理由',candidate?.acquisition?.reason||binding.reason);
+  const acquisition=candidate?.acquisition;
+  if(acquisition){
+   line(box,'解决的问题',acquisition.solves);
+   line(box,'下载大小',acquisition.download_bytes==null?'平台未提供大小':new Intl.NumberFormat('zh-CN').format(acquisition.download_bytes)+' 字节'+(acquisition.files?' · '+acquisition.files.length+' 个文件':''));
+   line(box,'版本',acquisition.commit||acquisition.version);
+   line(box,'依赖说明',acquisition.dependencies&& !/^(待核实|未知|待核验)$/.test(acquisition.dependencies)?acquisition.dependencies:'原方案未提供依赖核验结果');
+   if(candidate.setup?.status!=='available')line(box,'安装操作','在对话中确认安装 '+binding.skill+'，由 Agent 下载并配置。');
+  }else{line(box,'安装依据',candidate?.source);line(box,'环境记录',status.detail);}
+  const review=(plan.professional_review?.items||[]).find(r=>r.skill===binding.skill);
+  if(review){const more=el('details');more.append(el('summary','方法适配依据'));line(more,'与任务的契合',review.reason);line(more,'输入条件',review.input_basis);line(more,'适用范围',review.limits);box.append(more);}
+  const need=(plan.capability_needs||[]).find(x=>(n.capability_need_ids||[]).includes(x.id)&&x.decision?.candidate_id===binding.candidate_id);
+  if(need&&!need.method_evidence)line(box,'方法依据','当前方案缺少方法适配依据');
+  if(need?.method_evidence){const original=el('details');original.append(el('summary','查看采用的方法原文'),el('p',need.method_evidence.excerpt));box.append(original);}
+  panels.skills.append(box);
+ }
+ if(!n.bindings.length)line(panels.skills,'执行方式',n.method==='human'?'由用户作出决定':'按方案使用当前模型与工具');
+ for(const oid of n.outputs){const d=plan.deliverables.find(x=>x.id===oid);line(panels.outputs,d?.format?.toUpperCase()||'交付',d?.title||artifactName(oid));}
+ list(panels.outputs,'完成标准',n.done_when);
+ list(panels.outputs,'按计划检查',n.checks.map(c=>(c.kind==='native'?'专业技能检查记录：':'')+(c.criteria||({file:'文件存在且非空',review:'对照计划核对交付',native:'核对技能执行记录'})[c.kind]||c.kind)));
+ $('detailDialog').showModal();
+}
 
 function readiness(){
 const needs=plan.capability_needs||[];
@@ -295,7 +318,7 @@ const selected=new Set(plan.nodes.flatMap(n=>n.bindings.map(b=>b.candidate_id)))
 const pendingInstalls=(plan.capability_candidates||[]).filter(c=>selected.has(c.id)&&c.origin==='external'&&c.setup?.status!=='available');
 if(pendingInstalls.some(c=>c.acquisition?.download_bytes==null))return ['needs_installation_details','方案可审阅；候选技能下载大小待核实，补齐提案后再申请具体安装授权。'];
 if(pendingInstalls.length)return ['needs_installation_approval','方案可审阅；请先确认列出的具体技能安装提案。普通“按方案执行”不会授权新安装。'];
-return ['ready_for_confirmation','方案可确认；收到执行指令后，按已有授权完成必要准备并开始工作。'];
+return ['ready_for_confirmation','请先审阅或修改方案，再在对话中回复“按方案执行”。'];
 }
 
 function render(){
@@ -330,18 +353,18 @@ for(const n of plan.nodes.filter(n=>levels[n.id]===i)){
 let card=el('div',undefined,'node');
 card.dataset.id=n.id;
 if(removed.includes(n.id))card.classList.add('deleted');
-card.tabIndex=0;
-card.setAttribute('aria-label',n.title+'，悬停或聚焦查看详情');
+card.setAttribute('aria-label',n.title);
 const decisions=(plan.capability_needs||[]).filter(x=>(n.capability_need_ids||[]).includes(x.id)).map(x=>x.decision);
 const references=decisions.filter(x=>x.kind==='reference');
 const unresolved=decisions.some(x=>x.kind==='deferred'||(x.kind==='skill'&&x.fit!=='supported'));
 const methodLabel=unresolved?'专业能力待落实':references.length&&n.method==='direct'?'按专业方法执行':names[n.method];
 card.append(el('small',removed.includes(n.id)?'已标记删除 · 可恢复':methodLabel),el('strong',n.title));
 if(n.bindings.length)for(const b of n.bindings){
-let d=el('div',b.skill,'binding');
-d.append(el('span',readyNames[b.readiness]||'待核验','status'+(b.readiness==='ready'?'':' pending')));
-const c=(plan.capability_candidates||[]).find(x=>x.id===b.candidate_id);
-if(c)d.append(el('span',plan.selection_needs_review?'方案已编辑 · 选择待复核':c.origin==='external'&&c.setup?.status!=='available'&&c.acquisition?.download_bytes==null?'安装信息待核实':({approval_needed:'建议安装 · 待授权',approved:'安装已授权 · 待验证',blocked:'入口与依赖待准备',available:'能力选择依据见详情'})[c.setup?.status]||'待核验','status pending'));
+let d=el('div',undefined,'binding');
+const c=(plan.capability_candidates||[]).find(x=>x.id===b.candidate_id),url=skillLink(c),status=installationStatus(c,b);
+const name=el(url?'a':'span',b.skill+(url?' ↗':''),'skill-name');
+if(url){name.href=url;name.target='_blank';name.rel='noopener noreferrer';name.setAttribute('aria-label','打开技能详情 '+b.skill);}
+d.append(name,el('span',status.label,'status'+(status.ready?'':' pending')));
 card.append(d)}
 for(const ref of references){
 const candidate=(plan.capability_candidates||[]).find(x=>x.id===ref.candidate_id);
@@ -358,7 +381,7 @@ openNode(n.id)}
 ;
 card.append(edit);
 const contentIds=nodeOutlineIds(n);
-if(contentIds.length){
+if(contentIds.length>1){
  const list=el('div',undefined,'outline-list');
  const owners=contentIds.map(id=>plan.deliverables.find(d=>d.outline_ids?.includes(id)));
  const mixed=new Set(owners.map(d=>d?.id)).size>1;
@@ -376,18 +399,9 @@ if(contentIds.length){
  }
  card.append(list);
 }
-card.onmouseenter=()=>showTip(n,card);
-card.onmouseleave=()=>{
-hoverTimer=setTimeout(hideTip,140)}
-;
-card.onfocus=e=>{
-if(e.target===card)showTip(n,card)}
-;
-card.onblur=hideTip;
-card.onkeydown=e=>{
-if(e.key==='Escape')hideTip();
-if(e.key==='Enter'&&e.target===card)openNode(n.id)}
-;
+const footer=el('div',undefined,'node-footer');
+footer.append(el('span',n.outputs.map(artifactName).join(' · '),'output-summary'));
+const more=el('button','查看详情 →','detail-button');more.setAttribute('aria-label','查看详情 '+n.title);more.onclick=()=>showTip(n,more);footer.append(more);card.append(footer);
 row.append(card)}
 flow.append(row)}
 requestAnimationFrame(draw)
@@ -405,13 +419,13 @@ for(const n of plan.nodes)for(const dep of n.depends_on){
 let a=[...flow.querySelectorAll('.node')].find(x=>x.dataset.id===dep).getBoundingClientRect(),b=[...flow.querySelectorAll('.node')].find(x=>x.dataset.id===n.id).getBoundingClientRect(),x1=a.x+a.width/2-fr.x,y1=a.bottom-fr.y,x2=b.x+b.width/2-fr.x,y2=b.top-fr.y;
 let path=document.createElementNS(ns,'path');
 path.setAttribute('d',`M${x1},${y1} C${x1},${(y1+y2)/2} ${x2},${(y1+y2)/2} ${x2},${y2}`);
-path.setAttribute('stroke','#a3bba6');
+path.setAttribute('stroke','#d0bddc');
 path.setAttribute('fill','none');
 path.setAttribute('stroke-width','1.5');
 svg.append(path);
 let arrow=document.createElementNS(ns,'path');
 arrow.setAttribute('d',`M${x2-4},${y2-6} L${x2},${y2} L${x2+4},${y2-6}`);
-arrow.setAttribute('stroke','#71977b');
+arrow.setAttribute('stroke','#a783bd');
 arrow.setAttribute('fill','none');
 svg.append(arrow)}
 flow.prepend(svg)}
@@ -446,13 +460,24 @@ input.dataset.binding=i;
 input.dataset.field=key;
 l.append(input);
 box.append(l)}
-box.append(el('p','当前状态：'+readyNames[b.readiness],'hint'));
+box.append(el('p',installationStatus((plan.capability_candidates||[]).find(c=>c.id===b.candidate_id),b).label,'hint'));
 return box}
 ));
+$('singleContentEditor').replaceChildren();
+const ids=nodeOutlineIds(n);
+if(ids.length===1){
+ const item=plan.content_outline.find(x=>x.id===ids[0]);
+ if(item){const section=el('details');section.append(el('summary','具体问题与内容要求'));
+ for(const [key,label] of [['title','内容标题'],['claim','核心问题'],['points','具体内容 · 每行一项'],['sources','材料来源 · 每行一项'],['visual','组织方式'],['acceptance','内容验收 · 每行一项']]){
+  if(key==='title'&&item.title===n.title)continue;
+  const l=el('label',label),f=el('textarea');f.dataset.outline=item.id;f.dataset.field=key;f.value=Array.isArray(item[key])?item[key].join('\n'):(item[key]||'');l.append(f);section.append(l);
+ }
+ $('singleContentEditor').append(section);}
+}
 $('nodeDialog').showModal()}
 
 $('applyNode').onclick=()=>{
-let p=clone(plan),n=p.nodes.find(n=>n.id===selected);
+let p=clone(plan),n=p.nodes.find(n=>n.id===selected),oldTitle=n.title;
 Object.assign(n,{
 title:$('ntitle').value.trim(),description:$('description').value.trim(),reason:$('reason').value.trim(),method:$('method').value,depends_on:[...$('deps').querySelectorAll('input:checked')].map(x=>x.value),done_when:$('done').value.split('\n').map(x=>x.trim()).filter(Boolean)}
 );
@@ -466,6 +491,13 @@ if(n.method==='skill'&&!n.bindings.length)n.bindings=[{
 skill:'待匹配能力',scope:n.description,reason:'按调整后的任务重新核验匹配能力。',readiness:'unknown'}
 ];
 if(n.method!=='skill')n.bindings=[];
+const ids=nodeOutlineIds(n);
+if(ids.length===1){const item=p.content_outline.find(x=>x.id===ids[0]);if(item?.title===oldTitle)item.title=n.title;}
+for(const f of $('singleContentEditor').querySelectorAll('textarea')){
+ const item=p.content_outline.find(x=>x.id===f.dataset.outline),key=f.dataset.field,value=f.value.trim();
+ item[key]=['points','sources','acceptance'].includes(key)?value.split('\n').map(x=>x.trim()).filter(Boolean):value;
+}
+
 if(commit(p,'editError'))$('nodeDialog').close()}
 ;
 
@@ -619,8 +651,7 @@ $('moreButton').onclick=()=>{
 $('extraTools').hidden=!$('extraTools').hidden}
 ;
 for(const b of root.querySelectorAll('[data-close]'))b.onclick=()=>$(b.dataset.close).close();
-$('tip').onmouseenter=()=>clearTimeout(hoverTimer);
-$('tip').onmouseleave=hideTip;
+
 
 $('save').onclick=()=>{
 const draft={type:'sos-editor-draft',plan,removed,base_hash:$('plan-hash').textContent.trim(),base_revision:base.revision};
@@ -649,12 +680,9 @@ e.target.value=''}
 ;
 
 window.addEventListener('resize',()=>{
-hideTip();
 requestAnimationFrame(draw)}
 );
-window.addEventListener('scroll',hideTip,{
-passive:true}
-);
+
 check(plan);
 render();
 if(typeof window.skillOfSkillsStorage?.load==='function'){
