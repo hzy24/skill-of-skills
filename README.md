@@ -36,6 +36,10 @@
 
 HTML 保存需要宿主支持运行随包保存服务并访问其地址；具体集成方式见 [元景保存说明](references/yuanjing.md)。
 
+## 测试结果
+
+[查看「部门目标完成质量」A / B / C 对比测试](docs/benchmarks/department-goal-quality/README.md)：A **20.31**，B **20.55**，C **24.82**。页面包含测试设置、评分口径及结果边界。
+
 ## 第三方来源
 
 所引用的专业方法、版本和许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
