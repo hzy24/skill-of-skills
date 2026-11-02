@@ -1,10 +1,10 @@
 # Skill of Skills
 
-不知道怎么跟 Agent 聊天？听说 Skill 很强，却不知道该用哪个？你可能需要 Skill of Skills！
-
-不用想方设法构建复杂的提示词，也不用纠结琳琅满目的专业技能怎么选、选哪个，一句话感受agent的魅力！
+不知道怎么跟 Agent 聊天？听说 Skill 很强，却不知道该用哪个？你可能需要 SoS(Skill of Skills)！
 
 把你要干什么告诉Skill of Skills吧！
+
+不用想方设法构建复杂的提示词，也不用纠结琳琅满目的专业技能怎么选、选哪个，一句话感受agent的魅力！
 
 “老板让我分析一下这个季度的经营情况，材料都在这儿，用 Skill of Skills 帮我。”
 “下周要汇报了，帮我把这份申报书讲清楚，只有十分钟。”
@@ -32,13 +32,17 @@
 
 ## 安装与使用
 
-从 [1.0.0 Release](https://github.com/hzy24/skill-of-skills/releases/tag/1.0.0) 下载 `skill-of-skills-1.0.0.skill`，在元景的技能管理中上传并启用。带上材料，用日常语言提出任务；审阅、修改方案并保存后，回复“按方案执行”。
+从 [Release](https://github.com/hzy24/skill-of-skills/releases/) 下载 `.skill` 文件，在技能管理中上传并启用。
 
-HTML 保存需要宿主支持运行随包保存服务并访问其地址；具体集成方式见 [元景保存说明](references/yuanjing.md)。
+用日常语言提出任务；审阅、修改方案并保存后，回复“按方案执行”。
 
-## 测试结果
+HTML 保存需要宿主支持运行随包保存服务并访问其地址；技能目前面向第一届数智公司“元景杯”数字员工技能创新大赛开发，在元景数字员工上实现，具体HTML集成方式见 [元景保存说明](references/yuanjing.md)。
+
+## 元景数字员工benchmark测试结果
 
 [查看「部门目标完成质量」A / B / C 对比测试](docs/benchmarks/department-goal-quality/README.md)：A **20.31**，B **20.55**，C **24.82**。页面包含测试设置、评分口径及结果边界。
+
+没有更多免费token进行更全量的benchmark测试了QAQ
 
 ## 第三方来源
 
