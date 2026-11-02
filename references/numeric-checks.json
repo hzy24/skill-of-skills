@@ -1,0 +1,12 @@
+{
+  "checks": [{
+    "id": "cash-change",
+    "context": "公司合计/两期变化/万元",
+    "op": "sum",
+    "inputs": [
+      {"file":"final.pptx","slide":7,"pattern":"应收变化[：: ]*(?P<value>-?[0-9.]+)","context":"公司合计/两期变化/万元"},
+      {"file":"final.pptx","slide":7,"pattern":"其余变化[：: ]*(?P<value>-?[0-9.]+)","context":"公司合计/两期变化/万元"}
+    ],
+    "expected": {"file":"final.xlsx","sheet":"现金变化","cell":"B8","context":"公司合计/两期变化/万元"}
+  }]
+}

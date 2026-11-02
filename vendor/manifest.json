@@ -1,0 +1,83 @@
+[
+  {
+    "folder": "knowledge-work",
+    "repo": "anthropics/knowledge-work-plugins",
+    "commit": "2574e29377c7173d0cecffef29a6ecbd7f8ccb5d",
+    "path": "LICENSE",
+    "url": "https://github.com/anthropics/knowledge-work-plugins/blob/2574e29377c7173d0cecffef29a6ecbd7f8ccb5d/LICENSE",
+    "bytes": 11607,
+    "sha256": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26"
+  },
+  {
+    "folder": "knowledge-work",
+    "repo": "anthropics/knowledge-work-plugins",
+    "commit": "2574e29377c7173d0cecffef29a6ecbd7f8ccb5d",
+    "path": "data/CONNECTORS.md",
+    "url": "https://github.com/anthropics/knowledge-work-plugins/blob/2574e29377c7173d0cecffef29a6ecbd7f8ccb5d/data/CONNECTORS.md",
+    "bytes": 1061,
+    "sha256": "79de0e9613ef7870e773b6dcdcb7d50f4bff2c0574c14ab5e0aeb29014dcec7b"
+  },
+  {
+    "folder": "knowledge-work",
+    "repo": "anthropics/knowledge-work-plugins",
+    "commit": "2574e29377c7173d0cecffef29a6ecbd7f8ccb5d",
+    "path": "data/skills/analyze/SKILL.md",
+    "url": "https://github.com/anthropics/knowledge-work-plugins/blob/2574e29377c7173d0cecffef29a6ecbd7f8ccb5d/data/skills/analyze/SKILL.md",
+    "bytes": 4432,
+    "sha256": "4ee816363d944c7a959e43384576d979a414f37fff7071c0bfb8935aae10143e"
+  },
+  {
+    "folder": "knowledge-work",
+    "repo": "anthropics/knowledge-work-plugins",
+    "commit": "2574e29377c7173d0cecffef29a6ecbd7f8ccb5d",
+    "path": "data/skills/statistical-analysis/SKILL.md",
+    "url": "https://github.com/anthropics/knowledge-work-plugins/blob/2574e29377c7173d0cecffef29a6ecbd7f8ccb5d/data/skills/statistical-analysis/SKILL.md",
+    "bytes": 10434,
+    "sha256": "91a15cfc144efffcd622b09827362a73993a3ff30e3a78114801832477c9f8a0"
+  },
+  {
+    "folder": "knowledge-work",
+    "repo": "anthropics/knowledge-work-plugins",
+    "commit": "2574e29377c7173d0cecffef29a6ecbd7f8ccb5d",
+    "path": "data/skills/validate-data/SKILL.md",
+    "url": "https://github.com/anthropics/knowledge-work-plugins/blob/2574e29377c7173d0cecffef29a6ecbd7f8ccb5d/data/skills/validate-data/SKILL.md",
+    "bytes": 14916,
+    "sha256": "1e424822043480375b80aef9416227b1c8083af749ca536568716265f79ca54b"
+  },
+  {
+    "folder": "skill-creator",
+    "repo": "anthropics/skills",
+    "commit": "ca45fc496a3436251f191354091d557da31c15b5",
+    "path": "skills/skill-creator/LICENSE.txt",
+    "url": "https://github.com/anthropics/skills/blob/ca45fc496a3436251f191354091d557da31c15b5/skills/skill-creator/LICENSE.txt",
+    "bytes": 11346,
+    "sha256": "14099b9c79d031b9d4b32c736a4e20f2b941f52dd79500532d62d26dd716110c"
+  },
+  {
+    "folder": "skill-creator",
+    "repo": "anthropics/skills",
+    "commit": "ca45fc496a3436251f191354091d557da31c15b5",
+    "path": "skills/skill-creator/agents/grader.md",
+    "url": "https://github.com/anthropics/skills/blob/ca45fc496a3436251f191354091d557da31c15b5/skills/skill-creator/agents/grader.md",
+    "bytes": 9049,
+    "sha256": "57134da0c1a4eea33fbd74a1c9c44aa814f07d6bc64de303edb586f941e5d21a"
+  },
+  {
+    "folder": "superpowers",
+    "repo": "obra/superpowers",
+    "commit": "2ce8aa15d05bd57213e6f746f953aafb7ded7a8b",
+    "path": "LICENSE",
+    "url": "https://github.com/obra/superpowers/blob/2ce8aa15d05bd57213e6f746f953aafb7ded7a8b/LICENSE",
+    "bytes": 1070,
+    "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+  },
+  {
+    "folder": "superpowers",
+    "repo": "obra/superpowers",
+    "commit": "2ce8aa15d05bd57213e6f746f953aafb7ded7a8b",
+    "path": "skills/verification-before-completion/SKILL.md",
+    "url": "https://github.com/obra/superpowers/blob/2ce8aa15d05bd57213e6f746f953aafb7ded7a8b/skills/verification-before-completion/SKILL.md",
+    "bytes": 3646,
+    "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+  }
+]

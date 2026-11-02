@@ -1,0 +1,675 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Skill of Skills · 任务路线</title></head><body>
+<!-- WIDGET_START -->
+<style>
+.sos{--ink:#263c35;--muted:#6b7f76;--line:#dce6de;--green:#276449;--paper:#fff;color:var(--ink);font:14px/1.55 system-ui,-apple-system,"PingFang SC",sans-serif;max-width:980px;margin:auto}
+.sos *{box-sizing:border-box}
+.sos button,.sos input,.sos textarea,.sos select{font:inherit}
+.sos button{cursor:pointer;color:inherit;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:7px 11px}
+.sos button:hover{border-color:var(--green);background:#f0f7ef}
+.sos button:disabled{cursor:default;opacity:.55}
+.sos .primary{background:var(--green);color:white;border-color:var(--green)}
+.sos :focus-visible{outline:2px solid #6d9b7f;outline-offset:3px}
+.sos .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:14px 0;border-bottom:1px solid var(--line)}
+.sos h1{font-size:17px;font-weight:600;line-height:1.4;margin:0;flex:1;min-width:160px}
+.sos .version{color:var(--muted);font-size:12px}
+.sos .tools{display:flex;flex-wrap:wrap;gap:6px}
+.sos .hint{font-size:12px;color:var(--muted);margin:9px 0}
+.sos .canvas{position:relative;padding:24px 4px;overflow:auto}
+.sos .flow{position:relative;display:flex;flex-direction:column;gap:34px;min-width:0}
+.sos .row{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;position:relative;z-index:1}
+.sos .node{position:relative;flex:0 1 300px;min-width:200px;width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;padding:15px 42px 15px 16px;outline-offset:3px}
+.sos .node:hover,.sos .node:focus-within{border-color:#719b7c;background:#f8fbf6}
+.sos .node.deleted{opacity:.55;border-style:dashed}
+.sos .node.deleted strong{text-decoration:line-through}
+.sos .node small{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+.sos .node strong{display:block;font-size:15px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.sos .pencil{position:absolute;right:8px;top:9px;width:29px;height:29px;padding:5px;border-color:transparent;background:transparent}
+.sos .pencil svg{width:16px;height:16px;display:block}
+.sos .outline-list{margin:10px 0 0;padding:8px 0 0;border-top:1px solid var(--line);display:grid;gap:5px}
+.sos .outline-item{display:block;width:100%;text-align:left;font-size:12px;padding:5px 7px;line-height:1.5}
+.sos .binding{margin-top:8px;font-size:12px;overflow-wrap:anywhere}
+.sos .status{display:inline-block;border-radius:5px;padding:1px 5px;margin-left:4px;background:#edf6ed;color:#356647;font-size:11px}
+.sos .status.pending{background:#fbf1da;color:#896122}
+.sos .edges{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:0}
+.sos .notice{font-size:12px;line-height:1.5;color:var(--muted);padding:8px 0;white-space:pre-wrap}
+.sos .notice.error{color:#a54330}
+.sos .bottom{border-top:1px solid var(--line);padding:12px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sos .bottom .hint{flex:1;margin:0}
+.sos .tip{position:fixed;z-index:1000;width:min(360px,calc(100vw - 24px));max-height:65vh;overflow:auto;padding:16px;border:1px solid #b9cdbd;border-radius:12px;background:#f4f8f1;pointer-events:auto;font-size:13px}
+.sos .tip h2{font-size:15px;margin:0 0 10px;font-weight:600}
+.sos .tip p{margin:7px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.sos .tip b{font-weight:600}
+.sos [hidden]{display:none!important}
+.sos dialog{color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:88vh;border:1px solid var(--line);border-radius:14px;background:#fff;padding:0;overflow:auto}
+.sos dialog::backdrop{background:#172b244d}
+.sos .modal-head{position:sticky;top:0;z-index:2;background:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}
+.sos h2{font-size:17px;font-weight:600;margin:0}
+.sos .modal-body{padding:4px 20px 20px}
+.sos label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px}
+.sos input,.sos textarea,.sos select{width:100%;border:1px solid var(--line);border-radius:7px;padding:9px;color:var(--ink);background:#fcfdfb}
+.sos textarea{min-height:75px;resize:vertical}
+.sos .dep{display:flex;gap:8px;align-items:center;margin:7px 0;color:var(--ink)}
+.sos .dep input{width:auto}
+.sos .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.sos .danger{color:#a84335}
+.sos .bind-edit{border:1px solid var(--line);padding:10px;border-radius:8px;margin:12px 0}
+.sos summary{cursor:pointer;color:var(--green);font-size:12px;margin:14px 0}
+.sos .details-list{font-size:13px}
+.sos .error-text{font-size:12px;color:#a54330;white-space:pre-wrap}
+.sos #extraTools{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:520px){.sos .bar{align-items:flex-start}
+.sos h1{flex-basis:100%;font-size:16px}
+.sos .node{flex-basis:100%;max-width:350px}
+.sos .canvas{padding:20px 2px}
+.sos .tip{max-height:55vh}
+.sos .tools button{font-size:12px}
+}
+@media print{.sos .tools,.sos .bottom,.sos .pencil,.sos .notice,.sos .hint,.sos .tip{display:none!important}
+.sos .node{break-inside:avoid}
+}
+
+</style>
+<div class="sos" id="sos-root">
+ <div class="bar"><h1 id="title">任务路线</h1><span id="version" class="version"></span><div class="tools"><button id="persist" class="primary">保存修改</button><button id="requirementsButton">调整需求</button><button id="moreButton" aria-label="更多选项">···</button></div></div>
+ <div id="extraTools" hidden><button id="save">导出备份</button><button id="import">导入方案</button><button id="print">打印</button><button id="add">添加模块</button></div>
+ <p class="hint">悬停查看说明 · 点击铅笔编辑 · 连线表示前后依赖</p>
+ <p id="readiness" class="notice" role="status"></p>
+ <div class="canvas"><div id="flow" class="flow"></div></div>
+ <div id="notice" class="notice" role="status" aria-live="polite"></div>
+ <div class="bottom" id="handoff"><span id="syncState" class="hint"></span></div>
+ <div id="tip" class="tip" role="tooltip" hidden></div>
+ <dialog id="nodeDialog" aria-labelledby="editorTitle"><div class="modal-head"><h2 id="editorTitle">编辑模块</h2><button data-close="nodeDialog" aria-label="关闭模块编辑">×</button></div><div class="modal-body"><label for="ntitle">模块名称</label><input id="ntitle"><label for="description">工作说明</label><textarea id="description"></textarea><label for="reason">安排理由</label><textarea id="reason"></textarea><label for="method">执行方式</label><select id="method"><option value="direct">原生能力</option><option value="skill">调用技能</option><option value="human">用户判断</option></select><label>需要先完成的模块</label><div id="deps"></div><label for="done">完成标准 · 每行一项</label><textarea id="done"></textarea><div id="bindingEditor"></div><p class="hint">调整能力后，Agent 会重新核验可用条件。依赖和产物检查也会随方案重新核对。</p><p id="editError" class="error-text" role="alert"></p><div class="actions"><button id="applyNode" class="primary">完成编辑</button><button id="remove" class="danger">删除模块</button></div></div></dialog>
+ <dialog id="requirementsDialog" aria-labelledby="requirementsTitle"><div class="modal-head"><h2 id="requirementsTitle">需求与交付</h2><button data-close="requirementsDialog" aria-label="关闭需求编辑">×</button></div><div class="modal-body"><label for="ptitle">方案名称</label><input id="ptitle"><label for="pgoal">任务目标</label><textarea id="pgoal"></textarea><div id="requirements"></div><label for="pmode">使用方式</label><select id="pmode"><option value="execute_after_confirmation">确认后执行</option><option value="plan_only">仅供规划参考</option></select><label>预期交付</label><div id="outputs" class="details-list"></div><p id="requirementsError" class="error-text" role="alert"></p><div class="actions"><button id="applyRequirements" class="primary">完成编辑</button></div><details><summary>高级：编辑完整方案</summary><textarea id="raw" rows="12" spellcheck="false" aria-label="完整方案 JSON"></textarea><button id="applyRaw">应用完整方案</button></details></div></dialog>
+ <dialog id="outlineDialog" aria-labelledby="outlineTitle"><div class="modal-head"><h2 id="outlineTitle">编辑内容</h2><button data-close="outlineDialog" aria-label="关闭内容编辑">×</button></div><div class="modal-body"><div id="outlineFields"></div><p id="outlineError" class="error-text" role="alert"></p><div class="actions"><button id="applyOutline" class="primary">完成编辑</button><button id="outlineUp">上移</button><button id="outlineDown">下移</button><button id="removeOutline" class="danger">删除内容项</button></div></div></dialog>
+ <input id="file" type="file" accept=".json,application/json" hidden>
+ <script id="plan-data" type="application/json">__PLAN_DATA__</script>
+ <script id="plan-hash" type="text/plain">__PLAN_HASH__</script>
+</div>
+<script>
+(function(){
+
+'use strict';
+
+const root=document.getElementById('sos-root'),$=id=>root.querySelector('#'+id),clone=x=>JSON.parse(JSON.stringify(x));
+
+let base=JSON.parse($('plan-data').textContent),plan=clone(base),selected=plan.nodes[0]?.id,pending=false,hoverTimer,removed=[],editingOutline=null;
+
+const names={
+direct:'原生能力',skill:'调用技能',human:'用户判断'}
+,readyNames={
+ready:'已可用 · 无需安装',unknown:'是否需安装待核验',needs_setup:'需安装或配置'}
+;
+
+const bridge=()=>typeof window.skillOfSkillsStorage?.save==='function';
+
+function el(tag,text,cls){
+let n=document.createElement(tag);
+if(text!==undefined)n.textContent=text;
+if(cls)n.className=cls;
+return n}
+
+function message(text,bad=false){
+$('notice').textContent=text;
+$('notice').className='notice'+(bad?' error':'')}
+
+function check(p){
+
+ if(!p||typeof p!=='object'||!p.id||!p.title||!p.goal||!Number.isInteger(p.revision)||p.revision<1)throw Error('请补全方案标识、目标和版本');
+
+ if(!['plan_only','execute_after_confirmation'].includes(p.mode))throw Error('请选择有效的使用方式');
+
+ for(const k of ['nodes','requirements','materials','deliverables']){
+if(!Array.isArray(p[k]))throw Error(k+' 需要列表');
+let ids=p[k].map(x=>x.id);
+if(ids.some(x=>typeof x!=='string'||!/^[-\w]+$/.test(x))||new Set(ids).size!==ids.length)throw Error(k+' 标识需要唯一');
+}
+
+ if(!p.nodes.length||!p.requirements.length||!p.deliverables.length)throw Error('请保留任务、需求与交付物');
+
+ let ids=new Set(p.nodes.map(n=>n.id)),mats=new Set(p.materials.map(m=>m.id)),producers={
+}
+,req=new Set(p.requirements.map(r=>r.id)),covered=new Set();
+
+ for(const n of p.nodes){
+for(const k of ['depends_on','inputs','outputs','requirements','done_when','bindings','checks'])if(!Array.isArray(n[k]))throw Error(n.id+' 缺少列表 '+k);
+if(!names[n.method]||!n.title||!n.description||!n.reason||!n.outputs.length||!n.done_when.length)throw Error(n.id+' 请补全模块内容');
+if(n.method==='skill'&&!n.bindings.length)throw Error(n.id+' 请添加技能绑定');
+for(const b of n.bindings)if(!b.skill||!b.scope||!b.reason||!b.readiness)throw Error(n.id+' 技能说明不完整');
+for(const d of n.depends_on)if(!ids.has(d)||d===n.id)throw Error(n.id+' 前置模块无效');
+for(const r of n.requirements){
+if(!req.has(r))throw Error('引用了未知需求');
+covered.add(r)}
+for(const out of n.outputs){
+if(producers[out]||mats.has(out))throw Error('产物标识重复');
+producers[out]=n.id}
+for(const c of n.checks)if(!n.outputs.includes(c.artifact)||!['file','text_contains','csv_columns','pptx_pages','review','native'].includes(c.kind))throw Error(n.id+' 检查规则无效');
+if(n.outputs.some(o=>!n.checks.some(c=>c.artifact===o)))throw Error(n.id+' 请为产物添加检查');
+}
+
+ function ancestors(id,trail=[]){
+if(trail.includes(id))throw Error('依赖关系存在循环');
+let a=new Set;
+for(const d of p.nodes.find(n=>n.id===id).depends_on){
+a.add(d);
+for(const x of ancestors(d,[...trail,id]))a.add(x)}
+return a}
+
+ for(const n of p.nodes){
+let prev=ancestors(n.id);
+for(const inp of n.inputs)if(!mats.has(inp)&&!prev.has(producers[inp]))throw Error(n.id+' 输入缺少上游：'+inp)}
+
+ if([...req].some(r=>!covered.has(r)))throw Error('还有需求尚未分配模块');
+if(p.deliverables.some(d=>!producers[d.id]))throw Error('交付物缺少负责模块');
+const outline=p.content_outline===undefined?[]:p.content_outline;
+if(!Array.isArray(outline)||outline.some(o=>!o||typeof o!=='object'||Array.isArray(o)))throw Error('内容蓝图需要对象列表');
+const outlineIds=new Set(outline.map(o=>o.id));
+if(outlineIds.size!==outline.length)throw Error('内容条目标识需要唯一');
+for(const o of outline){
+ for(const k of ['id','title','claim','visual'])if(typeof o[k]!=='string'||!o[k].trim())throw Error('请补全内容条目的 '+k);
+ if(!/^[A-Za-z0-9_-]+$/.test(o.id))throw Error('内容条目标识需要使用字母、数字、下划线或连字符');
+ for(const k of ['points','sources','acceptance'])if(!Array.isArray(o[k])||!o[k].length||o[k].some(x=>typeof x!=='string'||!x.trim()))throw Error(o.title+' 需要具体内容、来源和验收说明');
+}
+for(const g of [...p.deliverables,...p.nodes])if('outline_ids' in g&&(!Array.isArray(g.outline_ids)||new Set(g.outline_ids).size!==g.outline_ids.length||g.outline_ids.some(id=>!outlineIds.has(id))))throw Error('内容引用缺失或重复');
+for(const d of p.deliverables){
+ if('outline_level' in d&&!['sections','pages'].includes(d.outline_level))throw Error('outline_level 需要 sections / pages');
+ if(d.outline_ids&&!d.outline_ids.length)throw Error('交付物的内容引用需要至少一项');
+ const pageChecks=p.nodes.flatMap(n=>n.checks.filter(c=>c.kind==='pptx_pages'&&c.artifact===d.id));
+ if((typeof d.format==='string'&&d.format.trim().toLowerCase().replace(/^\./,'')==='pptx')||pageChecks.length){
+  if(!d.outline_ids?.length)throw Error('请先列出本次汇报内容');
+  if(d.outline_level==='sections'){
+   if(new Set(pageChecks.map(c=>c.value)).size>1)throw Error('PPT 页数要求相互冲突');
+  }else if(!pageChecks.length||pageChecks.some(c=>c.value!==d.outline_ids.length))throw Error('PPT 页数检查须与逐页内容数量一致');
+ }
+}
+
+
+}
+
+
+function commit(next,errorId){
+try{
+if(pending)throw Error('正在读取或保存方案，请稍候。');
+check(next);
+if(next.id!==base.id)throw Error('请选择当前任务的方案或草稿，其他任务请单独打开。');
+next.revision=base.revision+1;
+delete next.confirmation;
+plan=next;
+render();
+message('有未保存修改。点击顶部“保存修改”写入计划文件。');
+return true}
+catch(e){
+if(errorId)$(errorId).textContent=e.message;
+message(e.message,true);
+return false}
+}
+
+function artifactName(id){
+return plan.materials.find(m=>m.id===id)?.title||plan.deliverables.find(d=>d.id===id)?.title||(plan.nodes.find(n=>n.outputs.includes(id))?plan.nodes.find(n=>n.outputs.includes(id)).title+'的产物 ('+id+')':id)}
+
+function nodeOutlineIds(n){
+const specific=[...new Set([...plan.deliverables.filter(d=>n.outputs.includes(d.id)).flatMap(d=>d.outline_ids||[]),...(n.outline_ids||[])])];
+return specific.length?specific:[...new Set((plan.capability_needs||[]).filter(x=>(n.capability_need_ids||[]).includes(x.id)).flatMap(x=>x.outline_ids||[]))]}
+
+function hideTip(){
+clearTimeout(hoverTimer);
+$('tip').hidden=true}
+
+function showTip(n,target){
+clearTimeout(hoverTimer);
+let tip=$('tip');
+tip.replaceChildren(el('h2',n.title));
+const line=(label,value,parent=tip)=>{
+let p=el('p');
+p.append(el('b',label+'：'),document.createTextNode(value||'无'));
+parent.append(p)}
+;
+line('工作说明',n.description);
+if(plan.constraints?.length)line('判断边界',plan.constraints.map(x=>typeof x==='string'?x:JSON.stringify(x)).join('；'));
+if(plan.assumptions?.length)line('采用的假设',plan.assumptions.map(x=>typeof x==='string'?x:JSON.stringify(x)).join('；'));
+if(plan.open_questions?.length)line('待确认事项',plan.open_questions.map(x=>typeof x==='string'?x:JSON.stringify(x)).join('；'));
+if(plan.selection_needs_review)line('能力选择','方案已修改，执行前将重新核验。');
+for(const need of (plan.capability_needs||[]).filter(x=>(n.capability_need_ids||[]).includes(x.id))){
+line('交付要求',need.standard);line('现有能力评估',need.existing_assessment);
+if(need.gap)line('需要补齐',need.gap);
+if(need.discovery)line('检索结果',need.discovery.evidence||'待检索');
+const d=need.decision||{},c=(plan.capability_candidates||[]).find(x=>x.id===d.candidate_id);
+line('采用方式',({skill:'调用专业能力',reference:'采用专业方法参考',direct:'原生处理',deferred:'能力缺口待解决'})[d.kind]||'待评估');
+if(d.direct_basis){line('原生处理依据',d.direct_basis.reason);line('覆盖与限制',(d.direct_basis.coverage||'')+'；'+(d.direct_basis.limitations||''));}
+line('选择理由',d.reason||'待评估');line('如何影响任务',d.application||'待核验');
+if(need.method_evidence){const detail=el('details');detail.append(el('summary','采用的方法原文'),el('p',need.method_evidence.excerpt));tip.append(detail);}
+if(d.fallback_limit)line('当前未覆盖',d.fallback_limit);
+if(c){line('候选来源',c.name+'；'+c.source+'；版本：'+c.version+'；许可：'+c.license);
+if(c.acquisition){const a=c.acquisition,card=el('section');
+tip.insertBefore(card,tip.children[2]||null);
+line('推荐安装的技能',a.name,card);
+if(/^https:\/\//.test(a.catalog_url)){const link=el('a',a.schema==='sos-market-proposal-v1'?'查看元景市场详情':'查看 Claude SkillHub 详情');link.href=a.catalog_url;link.target='_blank';link.rel='noopener noreferrer';card.append(link);}
+line('为什么适合',a.reason,card);line('解决的问题',a.solves,card);
+line('下载大小',a.download_bytes==null?'待核实；补齐后再申请安装授权':a.download_bytes+' 字节（'+(a.download_bytes/1048576).toFixed(2)+' MiB）'+(a.files?'，'+a.files.length+' 个文件':'')+'；依赖另列',card);
+line('运行依赖',a.dependencies,card);
+line('安装范围',(a.directory||a.skill_id)+' · 固定版本 '+(a.commit||a.version),card);line('安装确认',a.download_bytes==null?'先核实下载大小，再提出具体安装请求。':'请在对话中明确同意安装上述技能；保存方案及普通执行确认均不会授权安装。',card);}
+line('适配依据',(c.evidence||[]).map(e=>e.finding+'（'+e.locator+'）').join('；'));
+const fitReview=(plan.professional_review?.items||[]).find(x=>x.need===need.id);
+line('适配状态',plan.review_protocol_version===2?(fitReview?.verdict==='pass'?'已完成本次专业适配审阅':fitReview?.verdict==='fail'?'适配未通过':'原文引用已核对，专业适配待审阅'):({supported:'已有依据支持，效果按交付标准检查',unverified:'待验证',insufficient:'覆盖不足'})[d.fit]||'待核验');
+if(fitReview){line('适配审阅',fitReview.reason);line('输入依据',fitReview.input_basis);line('判断边界',fitReview.limits);}
+const setup=c.setup||{};line('安装状态',c.origin==='external'&&c.setup?.status!=='available'&&c.acquisition?.download_bytes==null?'下载大小待核实':({available:'当前环境已核验可用',approval_needed:'建议安装，等待授权',approved:'安装已获授权，待完成验证',blocked:'入口与依赖待核验，具体条件见说明'})[setup.status]||'待核验');
+if(setup.installation)line('安装来源、版本和目标',setup.installation);
+if(setup.request_reason)line('安装理由',setup.request_reason);
+if(setup.dependencies)line('依赖',setup.dependencies);
+if(setup.permissions)line('所需权限',setup.permissions);
+if(setup.fallback)line('暂不安装时',setup.fallback);
+}}
+
+line('安排依据',n.reason);
+line('输入',n.inputs.map(artifactName).join('、'));
+line('输出',n.outputs.map(artifactName).join('、'));
+line('依赖',n.depends_on.map(id=>plan.nodes.find(x=>x.id===id).title).join('、'));
+line('完成标准',n.done_when.join('；'));
+line('检查方式',n.checks.map(c=>({
+native:'专业技能原生验证',file:'文件存在且非空',review:'内容审阅',csv_columns:'表格列核对',pptx_pages:'汇报页数',text_contains:'关键内容核对'}
+[c.kind]||c.kind)+(c.criteria?'：'+c.criteria:'')).join('；'));
+for(const b of n.bindings){
+line('调用能力',b.skill+'；'+b.scope+'；'+readyNames[b.readiness]+'。'+b.reason);
+if(b.contract){
+if(b.contract.planning_effect)line('能力带来的安排',b.contract.planning_effect);
+line('使用方式',b.contract.mode==='branch'?'指定工作分支':'完整流程');
+line('前置条件',(b.contract.prerequisites||[]).map(r=>r.requirement+'（'+(r.status==='verified'?'已核验':'待核验')+'）').join('；')||'无额外条件');
+line('随能力执行的检查',(b.contract.required_checks||[]).map(c=>c.criteria||c.kind).join('；'));
+}}
+
+tip.hidden=false;
+let r=target.getBoundingClientRect(),below=innerHeight-r.bottom-19,above=r.top-19,showAbove=below<260&&above>below;
+tip.style.maxHeight=Math.max(70,Math.min(innerHeight*.65,showAbove?above:below))+'px';
+let w=tip.offsetWidth,h=tip.offsetHeight;
+tip.style.left=Math.max(12,Math.min(r.left,innerWidth-w-12))+'px';
+tip.style.top=Math.max(12,showAbove?r.top-h-7:r.bottom+7)+'px'}
+
+function readiness(){
+const needs=plan.capability_needs||[];
+const unresolved=needs.some(n=>n.task_kind!=='basic'&&(n.decision?.kind!=='skill'||n.decision?.fit!=='supported'));
+if(unresolved||(plan.capability_policy_version===3&&!needs.some(n=>n.role==='core')))return ['needs_capability','方案可审阅，专业能力待落实；解决所列问题后再确认执行。'];
+if(plan.review_protocol_version===2&&plan.professional_review?.verdict!=='pass')return ['needs_method_review','方案已生成；专业适配待实质审阅，引用核对通过尚不足以确认执行。'];
+if(plan.selection_needs_review)return ['needs_review','修改已保存，Agent 需按最新范围复核能力与依赖后执行。'];
+if(plan.open_questions?.length)return ['needs_decision','方案可审阅，先解决待确认事项，再执行相关工作。'];
+if(plan.mode==='plan_only')return ['plan_only','当前仅供规划参考。'];
+const selected=new Set(plan.nodes.flatMap(n=>n.bindings.map(b=>b.candidate_id)));
+const pendingInstalls=(plan.capability_candidates||[]).filter(c=>selected.has(c.id)&&c.origin==='external'&&c.setup?.status!=='available');
+if(pendingInstalls.some(c=>c.acquisition?.download_bytes==null))return ['needs_installation_details','方案可审阅；候选技能下载大小待核实，补齐提案后再申请具体安装授权。'];
+if(pendingInstalls.length)return ['needs_installation_approval','方案可审阅；请先确认列出的具体技能安装提案。普通“按方案执行”不会授权新安装。'];
+return ['ready_for_confirmation','方案可确认；收到执行指令后，按已有授权完成必要准备并开始工作。'];
+}
+
+function render(){
+
+ hideTip();
+$('title').textContent='任务路线';
+$('title').title=plan.title;
+$('version').textContent='v'+base.revision+((JSON.stringify(plan)!==JSON.stringify(base)||removed.length)?' · 已修改':'');
+$('raw').value=JSON.stringify(plan,null,2);
+
+ const changed=JSON.stringify(plan)!==JSON.stringify(base)||removed.length>0;
+$('persist').disabled=pending||!changed;
+$('persist').textContent=pending?'正在同步…':'保存修改';
+$('syncState').textContent=changed?'有未保存修改':('当前版本 v'+base.revision);
+const state=readiness();$('readiness').dataset.state=state[0];$('readiness').textContent=changed?'有未保存修改；保存后按最新范围复核方案。':state[1];
+
+ let flow=$('flow');
+flow.replaceChildren();
+let levels={
+}
+;
+function depth(n){
+if(levels[n.id]!==undefined)return levels[n.id];
+return levels[n.id]=n.depends_on.length?Math.max(...n.depends_on.map(id=>depth(plan.nodes.find(x=>x.id===id))))+1:0}
+plan.nodes.forEach(depth);
+
+ for(let i=0;
+i<=Math.max(...Object.values(levels));
+i++){
+let row=el('div',undefined,'row');
+for(const n of plan.nodes.filter(n=>levels[n.id]===i)){
+let card=el('div',undefined,'node');
+card.dataset.id=n.id;
+if(removed.includes(n.id))card.classList.add('deleted');
+card.tabIndex=0;
+card.setAttribute('aria-label',n.title+'，悬停或聚焦查看详情');
+const decisions=(plan.capability_needs||[]).filter(x=>(n.capability_need_ids||[]).includes(x.id)).map(x=>x.decision);
+const references=decisions.filter(x=>x.kind==='reference');
+const unresolved=decisions.some(x=>x.kind==='deferred'||(x.kind==='skill'&&x.fit!=='supported'));
+const methodLabel=unresolved?'专业能力待落实':references.length&&n.method==='direct'?'按专业方法执行':names[n.method];
+card.append(el('small',removed.includes(n.id)?'已标记删除 · 可恢复':methodLabel),el('strong',n.title));
+if(n.bindings.length)for(const b of n.bindings){
+let d=el('div',b.skill,'binding');
+d.append(el('span',readyNames[b.readiness]||'待核验','status'+(b.readiness==='ready'?'':' pending')));
+const c=(plan.capability_candidates||[]).find(x=>x.id===b.candidate_id);
+if(c)d.append(el('span',plan.selection_needs_review?'方案已编辑 · 选择待复核':c.origin==='external'&&c.setup?.status!=='available'&&c.acquisition?.download_bytes==null?'安装信息待核实':({approval_needed:'建议安装 · 待授权',approved:'安装已授权 · 待验证',blocked:'入口与依赖待准备',available:'能力选择依据见详情'})[c.setup?.status]||'待核验','status pending'));
+card.append(d)}
+for(const ref of references){
+const candidate=(plan.capability_candidates||[]).find(x=>x.id===ref.candidate_id);
+const line=el('div','方法：'+(candidate?.name||'待核验'),'binding');
+line.append(el('span',ref.fit==='supported'?'采用方法原文 · 无需安装':'方法适配待核验','status pending'));card.append(line)}
+if(unresolved)card.append(el('div','方法缺口待解决 · 该模块暂不可执行','binding'));
+if(!n.bindings.length&&!references.length&&!unresolved)card.append(el('div',n.method==='human'?'等待用户判断':'使用当前模型与工具','binding'));
+let edit=el('button',undefined,'pencil');
+edit.setAttribute('aria-label','编辑模块 '+n.title);
+edit.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M14 5l5 5M4 20l5-1L21 7a2 2 0 0 0-4-4L5 15z"/></svg>';
+edit.onclick=e=>{
+e.stopPropagation();
+openNode(n.id)}
+;
+card.append(edit);
+const contentIds=nodeOutlineIds(n);
+if(contentIds.length){
+ const list=el('div',undefined,'outline-list');
+ const owners=contentIds.map(id=>plan.deliverables.find(d=>d.outline_ids?.includes(id)));
+ const mixed=new Set(owners.map(d=>d?.id)).size>1;
+ const formatOf=d=>(d?.format||'').trim().toLowerCase().replace(/^\./,'');
+ for(const id of contentIds){
+  const item=(plan.content_outline||[]).find(o=>o.id===id);if(!item)continue;
+  const owner=owners[contentIds.indexOf(id)],order=(owner?.outline_ids||contentIds).indexOf(id)+1;
+  const format=formatOf(owner),sameFormat=owners.some(d=>d?.id!==owner?.id&&formatOf(d)===format);
+  const label=owner?(format&&!sameFormat?(format==='pptx'?'PPT':format.toUpperCase()):owner.title):'内容';
+  const prefix=mixed?label+' · '+order:order+'.';
+  const button=el('button',prefix+' '+item.title+'  ✎','outline-item');
+  button.setAttribute('aria-label','编辑内容 '+item.title);
+  button.onclick=e=>{e.stopPropagation();openOutline(id)};
+  button.onmouseenter=hideTip;list.append(button);
+ }
+ card.append(list);
+}
+card.onmouseenter=()=>showTip(n,card);
+card.onmouseleave=()=>{
+hoverTimer=setTimeout(hideTip,140)}
+;
+card.onfocus=e=>{
+if(e.target===card)showTip(n,card)}
+;
+card.onblur=hideTip;
+card.onkeydown=e=>{
+if(e.key==='Escape')hideTip();
+if(e.key==='Enter'&&e.target===card)openNode(n.id)}
+;
+row.append(card)}
+flow.append(row)}
+requestAnimationFrame(draw)
+}
+
+function draw(){
+let flow=$('flow');
+flow.querySelector('svg.edges')?.remove();
+let ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+svg.classList.add('edges');
+svg.setAttribute('width',flow.scrollWidth);
+svg.setAttribute('height',flow.scrollHeight);
+let fr=flow.getBoundingClientRect();
+for(const n of plan.nodes)for(const dep of n.depends_on){
+let a=[...flow.querySelectorAll('.node')].find(x=>x.dataset.id===dep).getBoundingClientRect(),b=[...flow.querySelectorAll('.node')].find(x=>x.dataset.id===n.id).getBoundingClientRect(),x1=a.x+a.width/2-fr.x,y1=a.bottom-fr.y,x2=b.x+b.width/2-fr.x,y2=b.top-fr.y;
+let path=document.createElementNS(ns,'path');
+path.setAttribute('d',`M${x1},${y1} C${x1},${(y1+y2)/2} ${x2},${(y1+y2)/2} ${x2},${y2}`);
+path.setAttribute('stroke','#a3bba6');
+path.setAttribute('fill','none');
+path.setAttribute('stroke-width','1.5');
+svg.append(path);
+let arrow=document.createElementNS(ns,'path');
+arrow.setAttribute('d',`M${x2-4},${y2-6} L${x2},${y2} L${x2+4},${y2-6}`);
+arrow.setAttribute('stroke','#71977b');
+arrow.setAttribute('fill','none');
+svg.append(arrow)}
+flow.prepend(svg)}
+
+function openNode(id){
+if(pending)return;
+hideTip();
+selected=id;
+let n=plan.nodes.find(n=>n.id===id);
+$('editorTitle').textContent='编辑模块 · '+id;
+$('ntitle').value=n.title;
+$('description').value=n.description;
+$('reason').value=n.reason;
+$('method').value=n.method;
+$('done').value=n.done_when.join('\n');
+$('editError').textContent='';
+$('remove').textContent=removed.includes(id)?'恢复模块':'删除模块';
+$('deps').replaceChildren(...plan.nodes.filter(x=>x.id!==id).map(x=>{
+let l=el('label',undefined,'dep'),c=el('input');
+c.type='checkbox';
+c.value=x.id;
+c.checked=n.depends_on.includes(x.id);
+l.append(c,document.createTextNode(x.title));
+return l}
+));
+$('bindingEditor').replaceChildren(...n.bindings.map((b,i)=>{
+let box=el('div',undefined,'bind-edit');
+for(const [key,label] of [['skill','技能 / 能力名称'],['scope','使用范围']]){
+let l=el('label',label),input=el('input');
+input.value=b[key];
+input.dataset.binding=i;
+input.dataset.field=key;
+l.append(input);
+box.append(l)}
+box.append(el('p','当前状态：'+readyNames[b.readiness],'hint'));
+return box}
+));
+$('nodeDialog').showModal()}
+
+$('applyNode').onclick=()=>{
+let p=clone(plan),n=p.nodes.find(n=>n.id===selected);
+Object.assign(n,{
+title:$('ntitle').value.trim(),description:$('description').value.trim(),reason:$('reason').value.trim(),method:$('method').value,depends_on:[...$('deps').querySelectorAll('input:checked')].map(x=>x.value),done_when:$('done').value.split('\n').map(x=>x.trim()).filter(Boolean)}
+);
+for(const f of $('bindingEditor').querySelectorAll('input')){
+let b=n.bindings[Number(f.dataset.binding)];
+if(b[f.dataset.field]!==f.value.trim()){
+b[f.dataset.field]=f.value.trim();
+b.readiness='unknown';delete b.contract}
+}
+if(n.method==='skill'&&!n.bindings.length)n.bindings=[{
+skill:'待匹配能力',scope:n.description,reason:'按调整后的任务重新核验匹配能力。',readiness:'unknown'}
+];
+if(n.method!=='skill')n.bindings=[];
+if(commit(p,'editError'))$('nodeDialog').close()}
+;
+
+$('remove').onclick=()=>{
+if(removed.includes(selected))removed=removed.filter(id=>id!==selected);
+else if(plan.nodes.length-removed.length<=1){$('editError').textContent='请至少保留一个任务模块。';return}
+else {
+const candidate=plan.nodes.find(n=>n.id===selected),gone=new Set([...removed,selected]);
+const blocked=plan.nodes.filter(n=>!gone.has(n.id)&&(n.depends_on.includes(selected)||n.inputs.some(i=>candidate.outputs.includes(i))));
+if(blocked.length){$('editError').textContent='请先调整或删除依赖此模块的工作：'+blocked.map(n=>n.title).join('、');return}
+removed.push(selected);
+}
+$('nodeDialog').close();render();
+const canceled=plan.deliverables.filter(d=>plan.nodes.some(n=>removed.includes(n.id)&&n.outputs.includes(d.id)));
+message(removed.length?'已标记删除，保存时取消专属需求和能力安排'+(canceled.length?'，取消交付：'+canceled.map(d=>d.title).join('、'):'')+'。保存前可恢复模块。':'模块已恢复。')}
+;
+
+$('requirementsButton').onclick=()=>{
+if(pending)return;
+hideTip();
+$('ptitle').value=plan.title;
+$('pgoal').value=plan.goal;
+$('pmode').value=plan.mode;
+$('requirementsError').textContent='';
+$('requirements').replaceChildren(...plan.requirements.map((r,i)=>{
+let l=el('label','需求 '+(i+1)),f=el('textarea');
+f.dataset.req=r.id;
+f.value=r.text;
+l.append(f);
+return l}
+));
+$('outputs').replaceChildren(...plan.deliverables.map(d=>el('p',d.title+'：'+d.description)));
+$('requirementsDialog').showModal()}
+;
+
+$('applyRequirements').onclick=()=>{
+let p=clone(plan);
+p.title=$('ptitle').value.trim();
+p.goal=$('pgoal').value.trim();
+p.mode=$('pmode').value;
+for(const f of $('requirements').querySelectorAll('textarea')){
+if(!f.value.trim()){
+$('requirementsError').textContent='请填写每项需求。';
+return}
+p.requirements.find(r=>r.id===f.dataset.req).text=f.value.trim()}
+if(commit(p,'requirementsError'))$('requirementsDialog').close()}
+;
+
+$('applyRaw').onclick=()=>{
+try{
+if(commit(JSON.parse($('raw').value),'requirementsError'))$('requirementsDialog').close()}
+catch(e){
+$('requirementsError').textContent=e.message}
+}
+;
+
+function changes(){
+let c={
+}
+;
+for(const key of Object.keys(plan)){
+if(['revision','confirmation','nodes'].includes(key))continue;
+if(JSON.stringify(plan[key])!==JSON.stringify(base[key]))c[key]=clone(plan[key])}
+let nodes=[];
+for(const n of plan.nodes){
+if(removed.includes(n.id))continue;
+const old=base.nodes.find(x=>x.id===n.id);
+if(!old){
+nodes.push({
+id:n.id,add:n}
+);
+continue}
+let set={
+}
+;
+for(const key of Object.keys(n))if(key!=='id'&&JSON.stringify(n[key])!==JSON.stringify(old[key]))set[key]=clone(n[key]);
+if(Object.keys(set).length)nodes.push({
+id:n.id,set}
+)}
+for(const n of base.nodes)if(!plan.nodes.some(x=>x.id===n.id))nodes.push({
+id:n.id,remove:true}
+);
+return {
+set:c,nodes}
+}
+
+async function persist(){
+ if(pending)return;
+ if(!bridge()){message('保存未完成：当前 HTML 容器尚未连接计划文件写入服务。页面修改仍在，请勿关闭。',true);return}
+ try{
+  check(plan);pending=true;render();
+  const result=await window.skillOfSkillsStorage.save({action:'update_plan',plan_id:base.id,base_revision:base.revision,base_hash:$('plan-hash').textContent.trim(),changes:changes(),remove_nodes:removed.filter(id=>base.nodes.some(n=>n.id===id))});
+  if(!result||result.persisted!==true||!result.plan||!result.hash)throw Error('写入服务未返回保存凭据');
+  check(result.plan);
+  if(result.plan.id!==base.id||result.plan.revision<base.revision)throw Error('保存返回了不匹配的计划版本');
+  base=clone(result.plan);plan=clone(base);removed=[];$('plan-hash').textContent=result.hash;
+  pending=false;render();message('已保存 v'+base.revision+'。'+readiness()[1]);
+ }catch(e){pending=false;render();message('保存未完成：'+e.message,true)}
+}
+$('persist').onclick=persist;
+
+function openOutline(id){
+ if(pending)return;hideTip();editingOutline=id;
+ const item=plan.content_outline.find(x=>x.id===id);
+ $('outlineTitle').textContent='编辑内容 · '+item.title;$('outlineError').textContent='';
+ $('outlineFields').replaceChildren();
+ for(const [key,label] of [['title','标题'],['claim','核心判断或待回答问题'],['points','具体内容 · 每行一项'],['sources','材料来源 · 每行一项'],['visual','组织与呈现方式'],['acceptance','验收标准 · 每行一项']]){
+  const l=el('label',label),f=el('textarea');f.dataset.field=key;f.value=Array.isArray(item[key])?item[key].join('\n'):item[key];l.append(f);$('outlineFields').append(l);
+ }
+ $('outlineDialog').showModal();
+}
+function editedOutline(){
+ const p=clone(plan),item=p.content_outline.find(x=>x.id===editingOutline);
+ for(const f of $('outlineFields').querySelectorAll('textarea')){
+  const key=f.dataset.field,value=f.value.trim();if(!value)throw Error('请补全标题、问题或判断、内容、来源、组织方式和验收要求');
+  item[key]=['points','sources','acceptance'].includes(key)?value.split('\n').map(x=>x.trim()).filter(Boolean):value;
+ }
+ return p;
+}
+$('applyOutline').onclick=()=>{try{if(commit(editedOutline(),'outlineError'))$('outlineDialog').close()}catch(e){$('outlineError').textContent=e.message}};
+function moveOutline(delta){
+ try{
+ const p=editedOutline();
+ for(const group of [...p.deliverables,...p.nodes]){const ids=group.outline_ids;if(!ids)continue;const i=ids.indexOf(editingOutline),j=i+delta;if(i>=0&&j>=0&&j<ids.length)[ids[i],ids[j]]=[ids[j],ids[i]]}
+ if(commit(p,'outlineError'))$('outlineDialog').close();
+ }catch(e){$('outlineError').textContent=e.message}
+}
+$('outlineUp').onclick=()=>moveOutline(-1);$('outlineDown').onclick=()=>moveOutline(1);
+$('removeOutline').onclick=()=>{
+ const p=clone(plan);
+ if(p.deliverables.some(d=>d.outline_ids?.includes(editingOutline)&&d.outline_ids.length===1)){$('outlineError').textContent='请至少保留一个内容项';return}
+ p.content_outline=p.content_outline.filter(x=>x.id!==editingOutline);
+ for(const g of [...p.deliverables,...p.nodes])if(g.outline_ids)g.outline_ids=g.outline_ids.filter(id=>id!==editingOutline);
+ for(const n of p.nodes)for(const c of n.checks)if(c.kind==='pptx_pages'){const d=p.deliverables.find(d=>d.id===c.artifact);if(d?.outline_ids&&d.outline_level!=='sections')c.value=d.outline_ids.length}
+ if(commit(p,'outlineError'))$('outlineDialog').close();
+};
+
+$('add').onclick=()=>{
+let p=clone(plan),i=1;
+while(p.nodes.some(n=>n.id==='N'+i)||p.materials.some(m=>m.id==='note'+i)||p.nodes.some(n=>n.outputs.includes('note'+i)))i++;
+let id='N'+i;
+p.nodes.push({
+id,title:'新增工作',description:'填写本模块处理的具体对象、方法和输出。',reason:'填写这项工作对交付的作用。',method:'direct',depends_on:[],inputs:[],outputs:['note'+i],requirements:[],done_when:['形成检查记录'],checks:[{
+kind:'review',artifact:'note'+i,id:'review-'+id,criteria:'对照模块完成标准核对实际产物并记录差异'}
+],bindings:[]}
+);
+if(commit(p))openNode(id)}
+;
+
+$('moreButton').onclick=()=>{
+$('extraTools').hidden=!$('extraTools').hidden}
+;
+for(const b of root.querySelectorAll('[data-close]'))b.onclick=()=>$(b.dataset.close).close();
+$('tip').onmouseenter=()=>clearTimeout(hoverTimer);
+$('tip').onmouseleave=hideTip;
+
+$('save').onclick=()=>{
+const draft={type:'sos-editor-draft',plan,removed,base_hash:$('plan-hash').textContent.trim(),base_revision:base.revision};
+let url=URL.createObjectURL(new Blob([JSON.stringify(draft,null,2)],{
+type:'application/json'}
+)),a=el('a');
+a.href=url;
+a.download=plan.id+'-draft-v'+base.revision+'.json';
+a.click();
+setTimeout(()=>URL.revokeObjectURL(url),1000)}
+;
+
+$('print').onclick=()=>window.print();
+$('import').onclick=()=>$('file').click();
+$('file').onchange=async e=>{
+try{
+let x=JSON.parse(await e.target.files[0].text());
+if(x.type==='sos-editor-draft'){
+ if(x.base_hash!==$('plan-hash').textContent.trim()||x.base_revision!==base.revision)throw Error('备份基于旧版本；请先核对当前方案并合并修改。');
+ if(!Array.isArray(x.removed)||x.removed.some(id=>!x.plan.nodes.some(n=>n.id===id))||new Set(x.removed).size!==x.removed.length)throw Error('草稿删除标记无效');
+ if(commit(x.plan)){removed=x.removed;render();}
+}else if(commit(x.type==='execution_request'?x.plan:x)){removed=[];render();}}
+catch(err){
+message('导入失败：'+err.message,true)}
+e.target.value=''}
+;
+
+window.addEventListener('resize',()=>{
+hideTip();
+requestAnimationFrame(draw)}
+);
+window.addEventListener('scroll',hideTip,{
+passive:true}
+);
+check(plan);
+render();
+if(typeof window.skillOfSkillsStorage?.load==='function'){
+ pending=true;render();
+ window.skillOfSkillsStorage.load().then(result=>{
+  check(result.plan);
+  if(result.plan.id!==base.id||!result.hash)throw Error('计划标识不匹配');
+  base=clone(result.plan);plan=clone(base);$('plan-hash').textContent=result.hash;
+  pending=false;render();message('已读取最新保存版本 v'+base.revision+'。');
+ }).catch(e=>{pending=false;render();message('读取最新版本失败：'+e.message,true)});
+}
+
+}
+)();
+
+</script>
+<!-- WIDGET_END -->
+</body></html>
