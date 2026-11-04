@@ -8,7 +8,7 @@ import argparse,json,re,shlex
 from pathlib import Path
 from plan_message import check_response
 
-ACTIONS={'init','search','inspect','local','section','methods','resource','probe','assess','assign','produce','publish','status','finish'}
+ACTIONS={'init','search','inspect','local','section','methods','resource','probe','assess','assign','route','produce','publish','status','finish'}
 
 def controller_tokens(command):
     if not isinstance(command,str) or any(x in command for x in ('`','$(')):return []
@@ -31,6 +31,12 @@ def check_tool(name,args,phase='authoring',new_request_authorized=False):
         if '--new-request' in tokens and not new_request_authorized:valid=False
         if valid and phase=='awaiting_delivery':valid=tokens[3] in ('status','finish')
         return dict(allowed=bool(valid),reason='规划控制器动作' if valid else '调用超出规划入口；定位文件用目录工具，业务处理留给执行')
+    if name=='Write':
+        try:
+            body=json.loads(args.get('content',''))
+            valid=Path(args.get('file_path','')).name=='route.json' and isinstance(body,dict) and set(body)=={'reason','deliver','stages'} and isinstance(body['stages'],list)
+        except (ValueError,TypeError):valid=False
+        return dict(allowed=valid and phase=='authoring',reason='写业务路线；计算和正文在确认后执行')
     if name=='Skill':return dict(allowed=args.get('skill')=='skill-of-skills',reason='首轮仅加载 SoS，所选专业技能在确认后执行')
     if name=='Read':
         p=Path(args.get('file_path',''))

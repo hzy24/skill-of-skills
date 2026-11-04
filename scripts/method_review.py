@@ -15,7 +15,7 @@ def basis(p):
     if 'assignment_protocol_version' in p:value['assignment_protocol_version']=p['assignment_protocol_version']
     if 'selection_policy_version' in p:value['selection_policy_version']=p['selection_policy_version']
     if 'message_protocol_version' in p:value['message_protocol_version']=p['message_protocol_version']
-    for key in ('selection_review_version','primary_assignment','selection_decisions'):
+    for key in ('selection_review_version','primary_assignment','selection_decisions','task_route_version','task_route'):
         if key in p:value[key]=copy.deepcopy(p[key])
     if 'input_contract_version' in p:value['input_contract_version']=p['input_contract_version']
     if p.get('flow_protocol_version')==1:value['coverage_map']=copy.deepcopy(p.get('coverage_map'))
@@ -44,6 +44,8 @@ def sources(p,base):
 
 def check_current(p,base):
     state=base/'.sos-flow.json'
+    if state.exists() and sos.read(state).get('authoring_contract',0)>=10 and p.get('task_route_version')!=1:
+        raise ValueError('业务阶段路线协议不可删除')
     if state.exists() and sos.read(state).get('authoring_contract',0)>=9:
         from planning_session import validate_owner
         validate_owner(base)
@@ -116,6 +118,11 @@ def packet(p,base):
                 items=rows)
     if p.get('assignment_protocol_version')==1:
         result['instruction']='核对专业委托与实际 Skill 的用途、方法和运行前提是否契合。原文引用已自动绑定，字段解释与口径核实交给执行阶段。普通字段改名、派生指标或多表整理不构成规划阻塞；真实材料缺失或外部系统要求说明影响。保留原始任务范围与文件制作分工，记录适配理由及限制。'
+    if p.get('task_route_version')==1:
+        result['stage_reason']=p['task_route']['reason']
+        for assignment,node in zip(result['assignments'],p['nodes']):
+            assignment.update(method_application=node['stage_method'],depends_on=node['depends_on'])
+        result['instruction']+=' 核对阶段是否覆盖原始交办、问题范围是否清楚、交接结果是否足够。结合方法判断拆分粒度；阶段数量与技能数量分别考虑。'
     if p.get('selection_review_version')==1:
         for row in rows:
             c=next((x for x in p['capability_candidates'] if x['name']==row['skill']),{})

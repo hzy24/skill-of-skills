@@ -86,7 +86,7 @@ class Flow:
         if not self.path.exists():raise ValueError('先运行 init --goal 用户目标 --inputs 材料路径')
         return sos.read(self.path)
     def save(self,s):sos.save(self.path,s)
-    def init(self,goal,inputs,contract=9,new_request=None):
+    def init(self,goal,inputs,contract=10,new_request=None):
         from planning_session import resolve,session_of
         self.root=resolve(self.root,inputs);self.path=self.root/STATE
         self.root.mkdir(parents=True,exist_ok=True)
@@ -154,6 +154,14 @@ class Flow:
                 result['next']='先核读任务专用方法并 assess；领域通用方法需通过专用候选比较。选好后 assign，交付物需制作时 produce，最后 publish。'
                 if s.get('assignment_started'):
                     result['next']='委托已登记。需要转交某个已登记交付物给制作技能时 produce --takeover 文件名；否则 publish。原任务目录保持不变。'
+        if phase=='authoring' and s.get('authoring_contract',0)>=10:
+            result['allowed_actions']=['route','publish','local --role support','produce','status'] if s.get('assignment_started') else ['assess','route','status'] if s.get('discovery_closed') else ['search','inspect','local','resource','probe','assess','route','status']
+            result.pop('assign_command',None)
+            result['route_command']=command(self.root,'route',str(self.root/'route.json'))
+            result['next']='依据已选方法划分业务阶段，用 Write 写 route.json，再运行 route。每阶段说明问题、方法应用、结果与依赖；同一 Skill 可负责多个阶段。单阶段说明划分依据。'
+            if s.get('route'):
+                result['next']='路线已登记。核对阶段分工与依赖；需要调整可再次 route 原文件，需要配套制作可 produce；完成后 publish。'
+                result['stages']=[dict(title=w['title'],skill=s['candidates'][w['candidate']]['name'],after=w.get('after',[]),outputs=[d['title'] for d in w['deliverables']]) for w in sos.read(self.root/'brief.json')['work']]
         if phase=='awaiting_delivery':
             delivery=s.get('delivery',{})
             if 'next_tool' not in delivery:
@@ -172,7 +180,7 @@ class Flow:
             result.update(execution_plan=str(self.root/'plan.json'),next='本轮结束。最终回复直接使用 user_message；技能分工和方案状态已由最新 plan.json 生成，不追加草案中的规则、结论或执行承诺。')
             sos.save(self.root/'handoff-message.json',{k:result[k] for k in ('user_message','readiness','plan_revision','plan_hash') if k in result})
         if phase!='authoring':
-            for key in ('build_command','submit_command','brief','assign_command','publish_command'):result.pop(key,None)
+            for key in ('build_command','submit_command','brief','assign_command','route_command','publish_command'):result.pop(key,None)
             result['authoring_closed']=True
             if (self.root/'brief.json').is_file() and s.get('submitted_hash'):
                 result['draft_changed_after_publish']=hashlib.sha256((self.root/'brief.json').read_bytes()).hexdigest()!=s['submitted_hash']
@@ -659,6 +667,32 @@ class Flow:
         b['work'].append(work)
         sos.save(self.root/'brief.json',b);s['assignment_hash']=sos.digest(b);self.save(s)
         return dict(self.status(),transferred=output,professional_content=handoff)
+    def route(self,document):
+        s=self.load()
+        if s['phase']!='authoring':return self.status()
+        from task_route import normalize
+        route=normalize(document,s)
+        previous=(self.root/'brief.json').read_bytes();original=copy.deepcopy(s)
+        try:
+            from assignment import form
+            sos.save(self.root/'brief.json',form(s['goal']))
+            s.pop('primary_title',None);s.pop('route',None);self.save(s)
+            by_title={r['title']:r for r in route['stages']}
+            for row in route['stages']:
+                if row['role']=='production':
+                    from selection_review import assess
+                    from assignment import source_refs
+                    current=self.load();c=current['candidates'][row['candidate']]
+                    c['assessment']=assess(c,current['goal'],'suitable',row['method'],source_refs(c,[]));self.save(current)
+                after=[o for title in row['after'] for o in by_title[title]['outputs']]
+                result=self.assign(row['candidate'],row['title'],row['method'],[row['question']],row['outputs'],row['checks'],
+                                   'support' if row['role']=='production' else 'core',after,_production=row['role']=='production')
+                if result.get('status')=='core_choice_rejected':raise ValueError(result['reason'])
+            s=self.load();s['route']=route;self.save(s)
+        except (ValueError,KeyError,TypeError,OSError):
+            (self.root/'brief.json').write_bytes(previous);self.save(original);raise
+        return self.status()
+
     def assign(self,candidate,title,reason,questions,outputs,checks,role='core',after=(),limits=(),_production=False):
         s=self.load()
         if s['phase']!='authoring':return self.status()
@@ -673,7 +707,7 @@ class Flow:
             if role=='core':
                 pending=[k for k,v in s['candidates'].items() if v.get('registration_role','core')=='core' and not v.get('assessment')]
                 if pending:raise ValueError('先记录已核读候选的取舍：'+', '.join(pending)+'；优先直接回答原始问题的方法')
-                if not s.get('primary_title'):
+                if not s.get('primary_title') and s.get('authoring_contract',0)<10:
                     questions=list(dict.fromkeys([s['goal'],*questions]))
         if role=='core':
             from capability_profile import core_issue
@@ -703,6 +737,7 @@ class Flow:
         """Accept one complete business document; preserve the previous file on parse failure."""
         s=self.load()
         if s['phase']!='authoring':return self.status()
+        if s.get('authoring_contract',0)>=10:return self.status()
         if s.get('authoring_contract',0)>=5:return dict(self.status(),next='新版委托通过 assign 登记，publish 生成方案；submit 保留给旧任务。')
         path=Path(path).resolve()
         if path.suffix!='.json' or not path.is_file():raise ValueError('submit 使用已写完的业务 JSON 文件')
@@ -730,6 +765,7 @@ class Flow:
         raw=(self.root/'brief.json').read_bytes();fingerprint=hashlib.sha256(raw).hexdigest()
         try:untouched=sos.digest(json.loads(raw))==s.get('initial_form_hash')
         except ValueError:untouched=False
+        if untouched and s.get('authoring_contract',0)>=10:return dict(self.status(),status='brief_not_authored',next='先通过 route 登记业务阶段路线，再 publish。')
         if untouched and s.get('authoring_contract',0)>=5:return dict(self.status(),status='brief_not_authored',next='先通过 assign 登记专业委托，再 publish。')
         if s.get('authoring_contract',0)>=5:
             try:registered=sos.digest(json.loads(raw))==s.get('assignment_hash')
@@ -738,6 +774,8 @@ class Flow:
         if untouched:
             return dict(status='brief_not_authored',phase='authoring',next='当前仍是初始化样表。用 Write 一次写入完整委托，再 submit；尚未发布或锁定方案。',
                         brief=str(self.root/'brief.json'),candidates=[dict(id=k,name=c['name'],sections=[dict(id=x['id'],title=x['title']) for x in c['sections']]) for k,c in s['candidates'].items()])
+        if s.get('authoring_contract',0)>=10 and not s.get('route'):
+            return dict(self.status(),status='route_required',next='先提交完整业务路线；阶段按方法和结果划分，同一技能可以承担多个阶段。')
         errors=s['build_errors']
         if errors and errors[-1]['hash']==fingerprint:return self.blocked(s,'业务草案未修正，停止重复编译。'+errors[-1]['error'])
         try:
@@ -803,6 +841,10 @@ class Flow:
         if s.get('discovery_scope'):p['discovery_scope']=copy.deepcopy(s['discovery_scope'])
         resource_paths=list(dict.fromkeys(row['section']['source_file'] for group in coverage for row in group if 'source_file' in row['section']))
         for i,path in enumerate(resource_paths):p['materials'].append(dict(id='MR'+str(i+1),title='专业方法配套依据 '+Path(path).name,path=path))
+        if s.get('authoring_contract',0)>=10:
+            from task_route import apply
+            apply(p,s['route'])
+            sos.require_plan(p)
         from method_review import packet,accept,basis
         review=packet(p,self.root)
         from capability_profile import issues
@@ -883,6 +925,7 @@ def main():
     p=sub.add_parser('receipt');p.add_argument('--files',nargs=2);p.add_argument('--reply')
     p=sub.add_parser('finish');p.add_argument('--files',nargs=2,required=True);p.add_argument('--reply')
     p=sub.add_parser('submit');p.add_argument('file')
+    p=sub.add_parser('route');p.add_argument('file')
     p=sub.add_parser('assign');p.add_argument('candidate');p.add_argument('--title',required=True);p.add_argument('--why');p.add_argument('--question',action='append',default=[]);p.add_argument('--output',action='append',required=True);p.add_argument('--check',action='append',required=True);p.add_argument('--role',choices=['core','support'],default='core');p.add_argument('--after',action='append',default=[]);p.add_argument('--limit',action='append',default=[])
     p=sub.add_parser('assess');p.add_argument('candidate');p.add_argument('--fit',choices=['suitable','unsuitable'],required=True);p.add_argument('--reason',required=True);p.add_argument('--method',action='append',default=[]);p.add_argument('--limit',action='append',default=[]);p.add_argument('--coverage',choices=['task','domain'],default='task');p.add_argument('--purpose',type=int,help='未分类用途时选择 purpose_options 的实际编号')
     p=sub.add_parser('produce');p.add_argument('candidate');p.add_argument('--output',action='append',default=[]);p.add_argument('--check',action='append',required=True);p.add_argument('--after',action='append',default=[]);p.add_argument('--takeover')
@@ -898,6 +941,7 @@ def main():
         elif a.action=='methods':r=f.methods(a.candidate)
         elif a.action=='resource':r=f.resource(a.candidate,a.path)
         elif a.action=='probe':r=f.probe(a.input_index,a.column,a.kind,a.sheet)
+        elif a.action=='route':r=f.route(sos.read(Path(a.file)))
         elif a.action=='assign':r=f.assign(a.candidate,a.title,a.why,a.question,a.output,a.check,a.role,a.after,a.limit)
         elif a.action=='assess':r=f.assess(a.candidate,a.fit,a.reason,a.method,a.limit,a.coverage,a.purpose)
         elif a.action=='produce':r=f.produce(a.candidate,a.output,a.check,a.after,a.takeover)
@@ -907,6 +951,8 @@ def main():
         else:
             s=f.load()
             r=f.deliver(s) if s['phase']=='awaiting_delivery' and 'next_tool' not in s.get('delivery',{}) else f.status()
+    if f.load().get('authoring_contract',0)>=10 and f.load()['phase']=='authoring' and (a.action in ('inspect','local','section','methods','resource','assess') or r.get('stop_discovery')) and r.get('status') not in ('core_choice_rejected','purpose_choice_required','method_choice_required','specific_search_required','candidate_unavailable','candidate_scope_mismatch'):
+        r['next']='核对方法用途与当前需求，完成 assess 选型后用 route 登记完整业务阶段路线；同一技能可负责多个阶段。方法应用与具体工作在阶段中说明。'
     details=f.root/'.sos-flow-results'/(str(time.time_ns())+'.json');sos.save(details,r)
     if a.action=='finish' and r.get('phase') in ('delivered','delivery_blocked'):
         if f.load().get('authoring_contract',0)>=8 and r.get('final_reply'):

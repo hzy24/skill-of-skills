@@ -22,7 +22,7 @@ def render(plan,delivered,blocked_reason=None):
     if not blocked_reason and status in ('ready_for_confirmation','needs_installation_approval') and plan.get('message_protocol_version')==2:
         # Keep the chat handoff short; the editable plan holds the full scope.
         lines[0]='方案 v'+str(plan.get('revision',1))+' 已交付：plan.html 和 plan.json。可在页面审阅、修改并保存。'
-        lines.append('计划成果：'+'、'.join(d['title'] for d in plan['deliverables'])+'。详细分工与检查要求见页面。')
+        lines.append('计划成果：'+'、'.join(d['title'] for d in plan['deliverables'] if d.get('delivery_role','final')=='final')+'。详细分工与检查要求见页面。')
         lines.append(confirmation(plan))
     elif not blocked_reason and status in ('ready_for_confirmation','needs_installation_approval'):
         lines.append('本次任务：'+plan['goal'])

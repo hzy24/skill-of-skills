@@ -41,7 +41,7 @@ def expand(brief,state):
         # A single specialist keeps the whole request. With several specialists,
         # preserve each explicit professional scope and the plan-level request;
         # do not ask the first specialist to perform everyone else's discipline.
-        if state.get('authoring_contract',0)>=6 and multiple_core and w.get('title')==state.get('primary_title') and len(questions)>1:
+        if 6<=state.get('authoring_contract',0)<10 and multiple_core and w.get('title')==state.get('primary_title') and len(questions)>1:
             questions=[q for q in questions if q!=state['goal']]
         if not questions or any(not isinstance(q,str) or not q.strip() for q in questions):raise ValueError('questions 填写需要专业 Skill 回答的问题文本')
         refs=(candidate.get('assessment',{}).get('methods',[]) if state.get('authoring_contract',0)>=6 else source_refs(candidate,questions)) if candidate else []
@@ -58,6 +58,8 @@ def item(candidate,title,reason,questions,outputs,checks,role='core',after=()):
     if any(not isinstance(x,str) or not x.strip() for x in [*questions,*outputs,*checks,*after]):raise ValueError('委托条目使用非空文本')
     deliverables=[]
     for name in dict.fromkeys(outputs):
+        from task_route import filename
+        name=filename(name)
         suffix=Path(name).suffix.lstrip('.').lower()
         if not suffix or '/' in name or '\\' in name:raise ValueError('成果使用带扩展名的文件名，如 分析报告.md；路径由执行阶段确定')
         deliverables.append(dict(title=name,format=suffix,criteria=list(dict.fromkeys(checks))))

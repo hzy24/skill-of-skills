@@ -38,8 +38,11 @@ def brief(p,nid,plan_hash,base):
       '适用边界：'+json.dumps({'constraints':p.get('constraints',[]),'assumptions':p.get('assumptions',[])},ensure_ascii=False),
       '完成条件：'+'；'.join(n['done_when']),
       '交付：'+'、'.join(x['title'] for x in outputs) if outputs else '交付产物 ID：'+'、'.join(n['outputs'])])
+    if p.get('task_route_version')==1:
+        context['task_route']=[dict(id=x['id'],title=x['title'],skills=[b['skill'] for b in x['bindings']],depends_on=x['depends_on']) for x in p['nodes']]
+        assignment+='\n阶段方法：'+n['stage_method']+'\n当前仅完成上述阶段。已读取且版本未变的 Skill 原文直接复用；继续同一技能时接收上游结果，分别记录阶段产物和检查，不重复执行已完成阶段。'
     return {'context':context,'instruction':assignment+'\n'+
-      '先读取绑定 Skill 的实际说明和所选分支；按其中的方法处理任务上下文中的材料，保留必要前置、步骤和验证。'
+      '使用绑定 Skill 的实际说明和所选分支；按其中的方法处理任务上下文中的材料，保留必要前置、步骤和验证。'
       '依据本任务的具体问题与完成标准执行，成熟 Skill 的内部步骤由其完整流程组织。'
       '模块约定目标、范围、输入输出和验收；专业 Skill 自主安排内部分析、起草、工具步骤与修复。'
       '执行开始时由专业 Skill 解释输入字段、核实指标口径与方法适用条件；正常的列名差异、必要字段派生和多表整理在本模块完成。影响结论的真实缺失记录为限制，不能虚构材料或制度阈值。'

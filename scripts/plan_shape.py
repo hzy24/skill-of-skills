@@ -11,7 +11,7 @@ CONTRACT={'inherit':str,'mode':str,'source':str,'source_evidence':str,'invocatio
           'branch_basis':str,'verification':str,
           'prerequisites':[{'requirement':str,'status':str,'evidence':str}]}
 BINDING={'skill':str,'candidate_id':str,'scope':str,'reason':str,'readiness':str,'contract':CONTRACT}
-NODE={k:str for k in ('id','title','description','reason','method')}
+NODE={k:str for k in ('id','title','description','reason','method','stage_method')}
 NODE.update({k:TEXTS for k in ('depends_on','inputs','outputs','requirements','done_when','outline_ids','capability_need_ids')})
 NODE.update(checks=[CHECK],bindings=[BINDING])
 NEED={'id':str,'task_kind':str,'requirement_ids':TEXTS,'standard':str,'existing_assessment':str,
@@ -29,7 +29,7 @@ SHAPE={k:str for k in ('id','title','goal','mode','capability_policy')}
 SHAPE.update(handoff_protocol_version=int,review_protocol_version=int,professional_review={'basis_hash':str,'verdict':str,'source_hashes':{},'items':[{}]})
 SHAPE.update({k:int for k in ('revision','max_attempts','capability_contract_version','selection_contract_version','quality_contract_version','capability_policy_version')})
 SHAPE.update(requirements=[{'id':str,'text':str}],materials=[{'id':str,'title':str,'path':str,'source_url':str}],
- deliverables=[{'id':str,'title':str,'description':str,'format':str,'outline_level':str,'outline_ids':TEXTS}],nodes=[NODE],
+ deliverables=[{'id':str,'title':str,'description':str,'format':str,'outline_level':str,'outline_ids':TEXTS,'delivery_role':str}],nodes=[NODE],
  content_outline=[{'id':str,'title':str,'claim':str,'visual':str,'points':TEXTS,'sources':TEXTS,'acceptance':TEXTS}],
  role_tasks=[{'id':str,'capability_need_ids':TEXTS}],scope_changes=[{}],capability_needs=[NEED],capability_candidates=[CANDIDATE],selection_needs_review=bool,selection_review_nodes=TEXTS)
 
@@ -43,3 +43,5 @@ def errors(value,schema=SHAPE,path='plan'):
     if type(value) is not schema:
         return [path+' 须为'+{str:'文本',int:'整数',bool:'布尔值'}[schema]]
     return []
+
+SHAPE.update(task_route_version=int,task_route={'reason':str,'verification':str})

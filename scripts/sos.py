@@ -134,7 +134,7 @@ def apply_edits(plan, request):
     if not isinstance(edits, list): raise ValueError('模块修改需要列表')
     seen = set()
     node_fields = {'title','description','reason','method','depends_on','inputs',
-                   'outputs','requirements','done_when','checks','bindings','outline_ids'}
+                   'outputs','requirements','done_when','checks','bindings','outline_ids','stage_method'}
     for edit in edits:
         if not isinstance(edit, dict): raise ValueError('模块修改格式无效')
         nid = edit.get('id')
@@ -158,6 +158,9 @@ def apply_edits(plan, request):
             current.update(edit['set'])
     malformed=shape_errors(result)
     if malformed:raise ValueError('；'.join(malformed))
+    if result.get('task_route_version')==1:
+        from task_route import reconcile_edits
+        reconcile_edits(plan,result)
     cancel_removed_scope(plan,result)
     if result.get('selection_review_version')==1:
         previous={n['id']:n for n in plan['nodes']}
@@ -175,6 +178,9 @@ def apply_edits(plan, request):
                     b['contract'].pop('verification',None)
                 for r in result['requirements']:
                     if r['id'] in n['requirements'] and sum(r['id'] in other['requirements'] for other in result['nodes'])==1:r['text']=n['description']
+    if result.get('task_route_version')==1:
+        from task_route import sync
+        sync(result)
     # A renamed capability cannot retain verification of the previous selection.
     old_contracts = [(b.get('skill'), b.get('scope'), b.get('contract'))
                      for n in plan['nodes'] for b in n['bindings'] if b.get('contract')]
@@ -434,6 +440,8 @@ def validate(p):
             if isinstance(n.get(key), list) and any(not isinstance(v, dict) for v in n[key]):
                 errors.append(n['id'] + ' 的 ' + key + ' 每项须为对象')
     if errors: return errors, warnings
+    from task_route import issues as route_issues
+    errors.extend(route_issues(p))
     for n in p['nodes']:
         for key in ('depends_on','inputs','outputs','requirements','done_when'):
             if any(not isinstance(x,str) or not x.strip() for x in n[key]): errors.append(n['id']+' '+key+' 需要非空字符串')
