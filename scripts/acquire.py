@@ -255,6 +255,11 @@ def main():
         write(a.out,p);r=dict(proposal=str(Path(a.out).resolve()),proposal_hash=digest(p),status='approval_needed')
     elif a.action=='record-market':r=record_market(json.loads(Path(a.proposal).read_text()),a.task_dir,a.proposal_hash,a.evidence,a.method_file,a.record)
     else:r=install(json.loads(Path(a.proposal).read_text()),a.task_dir,a.proposal_hash,a.evidence)
+    if a.action=='inspect-tencent':
+        from method_source import entry,sections
+        _,body=entry(Path(r['method_file']).read_text())
+        r['method_sections']=[dict(id=s['id'],title=s['title'],preview=s['text'][:100]) for s in sections(body)]
+        r['next']='从 method_sections 选与领域判断直接相关的章节，按需读取原文；在 draft.skills 填 method_scope、method_sections、fit_reason 和 input_fit。已给出目录，无需再运行 method_source 获取同一目录。'
     print(json.dumps(r,ensure_ascii=False,indent=2))
 
 if __name__=='__main__':

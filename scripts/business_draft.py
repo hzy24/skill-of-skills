@@ -10,7 +10,7 @@ from method_source import entry,same_name,contains_excerpt,resolve_name,select_s
 
 def expand(d, base=None):
     errors=[]
-    if type(d.get('draft_version')) is not int or d['draft_version']!=2:errors.append('draft_version 需要整数 2')
+    if type(d.get('draft_version')) is not int or d['draft_version'] not in (2,3):errors.append('draft_version 需要整数 2 或 3')
     def known(x,keys,at):
         for key in x:
             if key not in keys:errors.append(at+'.'+key+' 不是业务草案字段；结构字段由编译器生成')
@@ -28,8 +28,21 @@ def expand(d, base=None):
         if isinstance(x,str):x=[x]
         return [txt(v,at+'['+str(i)+']') for i,v in enumerate(seq(x,at))]
     title=txt(d.get('title'),'title');goal=txt(d.get('goal'),'goal')
-    for key in ('constraints','assumptions','open_questions'):
+    for key in ('constraints','assumptions'):
         for value in seq(d.get(key,[]),key,False):txt(value,key)
+    user_questions=[];scope_notes=[]
+    for i,q in enumerate(seq(d.get('open_questions',[]),'open_questions',False)):
+        at='open_questions['+str(i)+']'
+        if d.get('draft_version')==2 and isinstance(q,str):user_questions.append(txt(q,at));continue
+        q=obj(q,at);known(q,{'question','blocking','affects','reason'},at)
+        question=txt(q.get('question'),at+'.question')
+        if type(q.get('blocking')) is not bool:errors.append(at+'.blocking 需要 true 或 false；可限定结论后完成主要目标的事项用 false')
+        if q.get('blocking') is True:
+            affects=texts(q.get('affects'),at+'.affects');reason=txt(q.get('reason'),at+'.reason')
+            titles={w.get('title') for w in d.get('work',[]) if isinstance(w,dict)}
+            if any(a not in titles for a in affects):errors.append(at+'.affects 需要真实 work.title')
+            user_questions.append(question+'（影响：'+'、'.join(affects)+'；'+reason+'）')
+        elif q.get('blocking') is False:scope_notes.append(question)
     mapping=obj(d.get('mapping'),'mapping')
     known(mapping,{'domain','action','input_condition','capabilities'},'mapping')
     for k in ('domain','action','input_condition'):txt(mapping.get(k),'mapping.'+k)
@@ -44,8 +57,9 @@ def expand(d, base=None):
         ident='M'+str(i);register(name,ident,at);materials.append(dict(id=ident,title=name,path=path))
     for i,raw in enumerate(seq(d.get('skills',[]),'skills',False),1):
         at='skills['+str(i-1)+']';x=obj(raw,at);name=txt(x.get('name'),at+'.name')
-        known(x,{'name','source','method_file','workflow','checks','fit_reason','input_fit','version','license','installation','method_excerpt','method_sections','origin','proposal'},at)
+        known(x,{'name','source','method_file','workflow','checks','fit_reason','input_fit','version','license','installation','method_excerpt','method_sections','origin','proposal','method_scope'},at)
         if name in skills:errors.append(at+' 技能名称重复：'+name)
+        if d.get('draft_version')==3 and x.get('method_scope') not in ('specialist','general','delivery'):errors.append(at+'.method_scope 使用 specialist / general / delivery')
         values={k:txt(x.get(k),at+'.'+k) for k in ('source','method_file','fit_reason','input_fit')}
         values['workflow']=txt(x.get('workflow','遵循所选 Skill 的完整方法；本次依据见自动提取的原文章节'),at+'.workflow')
         values['checks']=txt(x.get('checks','执行原文要求的检查，并核对本次委托的成果标准'),at+'.checks')
@@ -67,6 +81,7 @@ def expand(d, base=None):
         c=dict(id=cid,name=name,source=values['source'],version=x.get('version','未记录版本'),license=x.get('license','待核对授权'),
                evidence=[dict(kind='method',locator=values['method_file'],finding=values['fit_reason']+'；输入适配：'+values['input_fit'])],
                setup=dict(status='blocked',dependencies=x.get('installation','执行前核对技能依赖'),permissions='沿用用户授权范围',verification='规划只核对方法；执行前核验入口和依赖'),method_support=support)
+        if d.get('draft_version')==3:c['method_scope']=x.get('method_scope')
         origin=x.get('origin','external' if any(t in values['source'].lower() for t in ('https://','http://','github','skillhub')) else 'installed')
         if origin not in ('external','installed'):errors.append(at+'.origin 需要 installed 或 external')
         c['origin']=origin
@@ -132,6 +147,8 @@ def expand(d, base=None):
         requirements.append(dict(id=rid,text=standard))
         outlines.append(dict(id=bid,title=name,claim=standard,points=questions,sources=inputs or ['用户需求'],visual='由负责技能确定成果内部结构',acceptance=[c['criteria'] for c in checks if 'criteria' in c]))
         source_defaults=defaults.get(candidate['id'],{}) if candidate else {}
+        if d.get('draft_version')==3 and role=='core' and candidate and source_defaults.get('method_scope')!='specialist':
+            errors.append(at+' 核心委托需要 specialist 专业方法；general 通用流程与 delivery 制作能力用于配套工作。制作本身是任务目标时按相应制作专业方法选型。')
         selection=x if 'method_sections' in x or 'method_excerpt' in x else source_defaults
         excerpt=selection.get('method_excerpt');evidence={};method_issue=''
         if candidate:
@@ -145,7 +162,7 @@ def expand(d, base=None):
                 method_issue='方法引用待定位：运行 method_source.py 查看原文章节，将所选 ID 写入 method_sections；中文解释保留在 fit_reason。'
         grounded=bool(candidate and not method_issue)
         decision=dict(kind='skill' if candidate else ('direct' if role=='basic' else 'deferred'),
-                      reason=(candidate['evidence'][0]['finding'] if candidate else (gap or '基础材料交接')),application=standard)
+                      reason=(x.get('reason') or candidate['evidence'][0]['finding'] if candidate else (gap or '基础材料交接')),application=standard)
         bindings=[]
         if candidate:
             decision.update(candidate_id=candidate['id'],fit='supported' if role!='core' or grounded else 'unverified')
@@ -164,7 +181,8 @@ def expand(d, base=None):
     result=dict(id=d.get('id','task-'+hashlib.sha256((title+goal).encode()).hexdigest()[:10]),title=title,goal=goal,
                 mode=d.get('mode','execute_after_confirmation'),mapping=mapping,requirements=requirements,materials=materials,
                 capability_candidates=candidates,capability_needs=needs,nodes=nodes,deliverables=deliverables,content_outline=outlines,
-                constraints=d.get('constraints',[]),assumptions=d.get('assumptions',[]),open_questions=d.get('open_questions',[]),method_evidence_version=1)
+                constraints=d.get('constraints',[])+scope_notes,assumptions=d.get('assumptions',[]),open_questions=user_questions,method_evidence_version=1)
+    if d.get('draft_version')==3:result['specialist_policy_version']=1
     from review_routing import route
     route(result,d.get('final_checks',[]))
     return result

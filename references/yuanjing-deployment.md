@@ -51,10 +51,16 @@ python <skill>/scripts/service_status.py <绝对任务目录>/.plan-server.json
 
 ## 登记附件交付并结束规划
 
-PresentToUser 成功返回后，将该次工具的原始文本结果（包含两个 file_path 及 Files copied 记录）保存为 present-result.txt。也可保存完整 tool_result JSON。运行：
+PresentToUser 成功返回后，新任务把实际返回的两个 file_path 交给控制器：
+
+```sh
+python <skill>/scripts/flow.py <任务目录> finish --files <HTML实际路径> <JSON实际路径>
+```
+
+命令核对副本、登记交付，直接输出最终回复。发送这段文字后结束，等待用户审阅。已有方案在 HTML 修改并保存后，执行入口读取同一任务目录最新 plan.json。
+
+旧版任务没有 .sos-flow.json 时，保留原始工具回执到 present-result.txt，使用兼容入口登记：
 
 ```sh
 python <skill>/scripts/handoff.py record <任务目录>/plan.json --html <任务目录>/plan.html --receipt <任务目录>/present-result.txt
 ```
-
-只有 HTML 和 JSON 均有成功交付回执才会登记。命令返回 awaiting_user_confirmation 后，结束本轮回复并等待用户审阅。不要继续打开执行模块、计算指标或制作成果。用户修改并保存后说“按方案执行”，读取同一目录最新 plan.json；无需重新导出附件或再次登记交付。

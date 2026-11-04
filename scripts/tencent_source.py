@@ -66,9 +66,16 @@ def inspect(task,slug,reason,solves,dependencies,license_text,reader=fetch):
         b=json.loads(budget.read_text()) if budget.exists() else dict(started=time.time(),attempts=0)
         clock=task/'.sos-planning.json'
         if clock.exists():b['started']=min(b['started'],json.loads(clock.read_text())['started_epoch'])
-        if b['attempts']>=3 or time.time()-b['started']>=300:raise ValueError('候选获取预算已用完，请使用本轮已读取的方法')
+        controller=task/'.sos-flow.json'
+        state=json.loads(controller.read_text()) if controller.exists() else {}
+        modern=state.get('authoring_contract',0)>=7
+        # Flow owns the action budget. Model thinking time is not download time,
+        # and failed reads must not consume all of the semantic review slots.
+        max_attempts=6 if modern else 4 if state.get('authoring_contract',0)>=6 else 3
+        action_budget=state.get('authoring_contract',0)>=5
+        if b['attempts']>=max_attempts or (not action_budget and time.time()-b['started']>=300):raise ValueError('候选获取预算已用完，请使用本轮已读取的方法')
         b['attempts']+=1;write(budget,b)
-        deadline=time.monotonic()+min(60,300-(time.time()-b['started']))
+        deadline=time.monotonic()+(60 if action_budget else min(60,300-(time.time()-b['started'])))
         base=API+quote(slug,safe='')
         detail=json.loads(reader(base,MAX_META,deadline))
         if detail.get('skill',{}).get('slug')!=slug:raise ValueError('详情返回了不同技能')

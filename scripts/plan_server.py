@@ -98,6 +98,7 @@ class PlanStore:
         template = Path(__file__).resolve().parents[1] / 'assets' / 'plan.html'
         html = template.read_text(encoding='utf-8')
         html = html.replace('__PLAN_DATA__', json_script(plan)).replace('__PLAN_HASH__', sos.digest(plan))
+        html = html.replace('__PLAN_READINESS__', json_script(assess(plan)))
         config = json_script({'endpoint': self.endpoint, 'token': self.token})
         bridge = '''<script>
 (() => {

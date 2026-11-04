@@ -12,7 +12,9 @@ def entry(text):
     quoted=re.fullmatch(r'''(["'])(.*?)\1\s*(?:#.*)?''',value)
     if quoted:value=quoted.group(2)
     else:value=re.split(r'\s+#',value,maxsplit=1)[0].strip()
-    if not re.fullmatch(r'[A-Za-z0-9_.-]+(?::[A-Za-z0-9_.-]+)*',value):return None,front.group(2)
+    # Marketplace entries use Unicode display names, including Chinese. The
+    # pinned catalog slug identifies the download; name is never a path.
+    if len(value)>200 or not re.fullmatch(r'[\w.-]+(?::[\w.-]+)*',value):return None,front.group(2)
     return value,front.group(2)
 
 def same_name(requested,declared):

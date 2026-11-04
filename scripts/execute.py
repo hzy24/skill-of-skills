@@ -90,12 +90,18 @@ def ready(plan,state,nid,verification,base_hash):
                 instruction='准备完成；首次 open 加 --evidence 记录实际执行授权。')
 
 def open_node(plan,state,nid,evidence=None):
+    from planning_session import validate_owner
+    validate_owner(plan.parent)
+    validate_owner(state.parent)
+    flow=plan.parent/'.sos-flow.json'
+    if flow.exists() and sos.read(flow).get('authoring_contract',0)>=9 and not state.resolve().is_relative_to(plan.parent.resolve()):
+        raise ValueError('执行状态保存在本任务目录内，不能共享其他任务的 run.json')
     p=sos.read(plan);n=node_of(p,nid)
     sos.require_plan(p)
     from plan_status import assess
     readiness=assess(p)
     if p['mode']=='plan_only':return dict(status='plan_only',instruction='当前只生成方案，不准备或执行能力。')
-    if readiness['status'] in ('needs_capability','needs_decision','needs_installation_details','needs_method_review'):
+    if readiness['status'] in ('needs_capability','needs_decision','needs_installation_details','needs_method_review','needs_input_review'):
         return dict(status=readiness['status'],issues=readiness['issues'],questions=p.get('open_questions',[]),instruction=readiness['message'],
                     next=shlex.join([sys.executable,str(Path(__file__).with_name('method_review.py')),'open',str(plan)]) if readiness['status']=='needs_method_review' else None)
     from method_review import check_current

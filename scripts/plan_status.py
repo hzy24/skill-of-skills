@@ -6,14 +6,24 @@ def assess(p):
     needs=p.get('capability_needs',[])
     unresolved=[n for n in needs if n.get('task_kind')!='basic' and
                 (n.get('decision',{}).get('kind')!='skill' or n['decision'].get('fit')!='supported')]
+    if p.get('specialist_policy_version')==1:
+        candidates={c['id']:c for c in p.get('capability_candidates',[])}
+        for need in needs:
+            if need.get('role')=='core' and candidates.get(need.get('decision',{}).get('candidate_id'),{}).get('method_scope')!='specialist' and need not in unresolved:unresolved.append(need)
     issues=[dict(need=n['id'],reason=n.get('decision',{}).get('method_issue') or n.get('decision',{}).get('reason','能力待选择')) for n in unresolved]
+    from capability_profile import issues as profile_issues
+    issues.extend(profile_issues(p))
     if p.get('capability_policy_version')==3 and not any(n.get('role')=='core' for n in needs):
         issues.append(dict(need='core',reason='尚未安排核心专业委托'))
     preparation=list(dict.fromkeys(b['skill'] for n in p['nodes'] for b in n['bindings'] if b.get('readiness')!='ready'))
     selected={b['candidate_id'] for n in p['nodes'] for b in n['bindings']}
     installs=[dict(skill=c['name'],proposal_hash=c.get('proposal_hash'),catalog_url=c.get('acquisition',{}).get('catalog_url'),download_bytes=c.get('acquisition',{}).get('download_bytes')) for c in p.get('capability_candidates',[]) if c['id'] in selected and c.get('origin')=='external' and c.get('setup',{}).get('status')!='available']
-    if issues:
+    input_issues=[x for x in issues if x.get('kind')=='method_input']
+    capability_issues=[x for x in issues if x.get('kind')!='method_input']
+    if capability_issues:
         status='needs_capability';message='方案可审阅，专业能力待落实；解决所列问题后再确认执行。'
+    elif input_issues:
+        status='needs_input_review';message='专业方法已选定，输入对应关系需要核实；核实或移除不适用的方法后再执行。'
     elif __import__('method_review').pending(p):
         status='needs_method_review';message='方案已生成；专业适配待实质审阅，引用核对通过尚不足以确认执行。'
     elif p.get('selection_needs_review'):
@@ -30,6 +40,15 @@ def assess(p):
         status='ready_for_confirmation';message='请先审阅或修改方案，再在对话中回复“按方案执行”。'
     return dict(status=status,can_confirm=status=='ready_for_confirmation',message=message,issues=issues,
                 preparation=preparation,installation_approval_required=installs,method_quality='方法适配按原文评估；执行按 plan 核对技能调用与交付')
+
+def confirmation(p):
+    readiness=assess(p);installs=readiness['installation_approval_required']
+    names='、'.join(x['skill'] for x in installs)
+    if readiness['status']=='needs_installation_details':return '先补齐所列安装提案大小，再申请授权。'
+    if readiness['status']=='needs_decision':return '先确认方案列出的业务取舍。'+('另需明确同意安装 '+names+'。' if names else '')
+    if readiness['status']=='needs_installation_approval':return '若接受方案和安装提案，可回复：同意安装 '+names+'，并按方案执行。'
+    if readiness['can_confirm']:return '审阅或保存修改后，可回复：按方案执行。'
+    return readiness['message']
 
 if __name__=='__main__':
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('plan');a=ap.parse_args()

@@ -1,42 +1,25 @@
 # 元景保存与交付
 
-HTML 是 plan.json 的阅读器和编辑器。将唯一 plan.json 保存在当前沙箱可交付的独立任务目录；HTML 和服务状态文件同目录。
+HTML 是唯一 plan.json 的阅读器和编辑器。工作目录使用当前沙箱可访问的独立任务目录。
 
-## 启动一次保存服务
+## 正常交付
 
-通过宿主 Bash 的 run_in_background 启动：
+新任务统一使用 `flow.py <任务目录> publish`，按返回的 next_tool 交付两个文件，将工具返回的两个 file_path 传给 receipt_command 的 --files 参数。随后返回 phase=delivered 并结束等待确认。首次规划流程见[规划入口](planning.md)。
 
-```sh
-python <skill>/scripts/plan_server.py --plan <绝对任务目录>/plan.json --html <绝对任务目录>/plan.html --meta <绝对任务目录>/.plan-server.json
-```
+恢复时运行 `flow.py <任务目录> status`。程序复用原始 plan.json 和保存服务；首次规划不再单独调用编译或方法审阅脚本。回执可能包含 Files copied 行，也可能直接列出已经在输出目录的文件路径，两种真实格式均可登记。缺少任一规划文件仍会失败。
 
-再运行一次检查：
+旧版无 .sos-flow.json 的任务继续使用 `plan_delivery.py prepare <plan.json>` 与返回的登记命令，保留原有方案。
 
-```sh
-python <skill>/scripts/service_status.py <绝对任务目录>/.plan-server.json
-```
+## 状态与授权
 
-服务持续运行，无需等待它退出。状态文件暂未出现时查看后台报错；同一计划复用已有服务，避免重复启动。检查失败只针对实际错误修复；部署、端口或浏览器连接问题查[部署与恢复](yuanjing-deployment.md)。
+`awaiting_attachment_delivery` 表示附件还没有交付。`plan_readiness` 表示业务方案条件，安装或业务问题待确认时也照常交付附件；这两个状态分开。
 
-## 交付与准确说明状态
+安装请求使用 plan 中的准确技能名、来源、版本和大小。按具体提案确认安装；“按方案执行”只确认执行，不授权新安装。可向用户提供一句包含所有具体技能名的安装及执行确认示例。许可未知时照实显示，不能改称 MIT。
 
-ready=true 表示沙箱内保存服务已就绪。plan_readiness 表示方案条件：ready_for_confirmation 可邀请确认；needs_capability 明确说明能力缺口；needs_decision 处理待定取舍；needs_review 在执行前复核最新编辑。保存服务就绪不证明专业能力或浏览器通路已经验证。
+## 保存与执行
 
-用 PresentToUser 同时交付 delivery_files 中的 plan.html 和 plan.json，核对成功回执包含两个文件。按实际 plan_readiness 向用户说明状态。HTML 默认在宿主支持的侧栏展示；实际展示和保存通路须在元景观察验证。
+页面保存成功后服务原子写入 JSON 并读回。失败保留页面草稿。用户确认执行时读取返回的 execution_plan 最新版本，复核修改，沿用原方案路径。普通文件复制产生的旧快照不用于执行。
 
-## 保存后使用最新方案
+保存只改方案，不启动工作。不要用普通 render 覆盖已连接的 HTML。删除模块时取消其独占成果和检查，保留下游依赖校验。用户无需导出再上传。
 
-用户在页面点击顶部“保存修改”，服务校验版本、原子写入 JSON 并读回，成功后显示版本。失败保留页面草稿；不得宣称保存成功。用户说“按方案执行”时，重新读取 execution_plan 指向的原文件，复核变更和能力准备，再按执行协议推进。首次执行确认来自方案交付后的用户消息，使用确认原话；页面保存本身不启动工作。
-
-保持 plan.json 的唯一执行入口，不另复制成其他版本；不要用普通 render 覆盖已连接的 HTML。页面删除模块会取消其独占成果和检查；仍有下游依赖时先调整关联。正常操作无需导出上传，备份用于故障恢复。状态文件含临时写入凭据，不作为附件或聊天内容交付。
-
-
-## 登记附件交付并结束规划
-
-PresentToUser 成功返回后，将该次工具的原始文本结果（包含两个 file_path 及 Files copied 记录）保存为 present-result.txt。也可保存完整 tool_result JSON。运行：
-
-```sh
-python <skill>/scripts/handoff.py record <任务目录>/plan.json --html <任务目录>/plan.html --receipt <任务目录>/present-result.txt
-```
-
-只有 HTML 和 JSON 均有成功交付回执才会登记。命令返回 awaiting_user_confirmation 后，结束本轮回复并等待用户审阅。不要继续打开执行模块、计算指标或制作成果。用户修改并保存后说“按方案执行”，读取同一目录最新 plan.json；无需重新导出附件或再次登记交付。
+脚本能生成和检查附件、维持保存服务并阻止缺失交付记录的执行；真正调用 PresentToUser 仍由宿主完成。私有服务状态和日志不作为用户附件。

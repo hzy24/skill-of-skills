@@ -159,6 +159,22 @@ def apply_edits(plan, request):
     malformed=shape_errors(result)
     if malformed:raise ValueError('；'.join(malformed))
     cancel_removed_scope(plan,result)
+    if result.get('selection_review_version')==1:
+        previous={n['id']:n for n in plan['nodes']}
+        for n in result['nodes']:
+            old=previous.get(n['id'])
+            if not old:continue
+            if result['goal']!=plan['goal'] and result.get('primary_assignment',{}).get('node')==n['id'] and n['description']==old['description']:
+                n['description']=n['description'].replace(plan['goal'],result['goal'],1)
+            if n['description']!=old['description'] and len(n.get('capability_need_ids',[]))==len(n['bindings'])==1:
+                need=next(x for x in result['capability_needs'] if x['id']==n['capability_need_ids'][0])
+                need['standard']=n['description'];need['decision']['application']=n['description']
+                b=n['bindings'][0];b['scope']=n['description'];b['readiness']='unknown'
+                if b.get('contract'):
+                    b['contract']['invocation']='按所选 Skill 的完整方法完成最新模块范围：'+n['description']
+                    b['contract'].pop('verification',None)
+                for r in result['requirements']:
+                    if r['id'] in n['requirements'] and sum(r['id'] in other['requirements'] for other in result['nodes'])==1:r['text']=n['description']
     # A renamed capability cannot retain verification of the previous selection.
     old_contracts = [(b.get('skill'), b.get('scope'), b.get('contract'))
                      for n in plan['nodes'] for b in n['bindings'] if b.get('contract')]
@@ -736,6 +752,8 @@ def main():
         if out.resolve()==Path(a.plan).resolve():raise ValueError('HTML 输出不能覆盖 plan.json')
         out.parent.mkdir(parents=True,exist_ok=True)
         html=template.read_text(encoding='utf-8').replace('__PLAN_DATA__',payload).replace('__PLAN_HASH__',digest(p))
+        from plan_status import assess
+        html=html.replace('__PLAN_READINESS__',json.dumps(assess(p),ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026'))
         if a.widget: raise ValueError('旧 widget 已退出；请使用 plan_server.py 交付当前 HTML')
         out.write_text(html,encoding='utf-8'); print(out.resolve())
     elif a.command=='apply-edits':

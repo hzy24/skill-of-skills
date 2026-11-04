@@ -21,6 +21,14 @@ def status(draft,now=None):
     if type(start) not in (float,int):raise ValueError('规划计时 started_epoch 无效，请保留真实起点')
     elapsed=max(0,(time.time() if now is None else now)-start)
     attempts=len(data.get('attempts',[]))
+    controller=shared.parent/'.sos-flow.json'
+    if controller.exists():
+        state=json.loads(controller.read_text())
+        if state.get('authoring_contract',0)>=5:
+            closed=state.get('phase')!='authoring' or bool(state.get('assignment_started') or state.get('discovery_closed'))
+            return dict(measured=True,elapsed_seconds=round(elapsed,1),stop_discovery=closed,
+                        budget_kind='bounded-actions',max_search_requests=12 if state.get('authoring_contract',0)>=7 else 8,compile_attempts=attempts,
+                        next='按控制器返回的剩余动作推进；来源读取失败另用替补额度，能力契合标准保持不变。已选型则登记委托并交付。')
     compiled=any(a.get('status') in ('compiled','compiled_unresolved') for a in data.get('attempts',[]))
     unresolved=bool(data.get('attempts') and data['attempts'][-1].get('status')=='compiled_unresolved')
     if compiled:next_step=('方案已生成，能力引用待修复；停止扩展检索，可用 --repair 修正一次原文章节引用。' if unresolved and attempts<2 else '方案已编译，交付时说明当前能力状态；现有方案通过编辑或能力换用更新，停止首次规划检索。')

@@ -8,7 +8,7 @@ from planning_budget import session,session_path,status
 from plan_status import assess
 
 def prepare(draft, base_dir=None):
-    if isinstance(draft,dict) and draft.get('draft_version')==2:
+    if isinstance(draft,dict) and draft.get('draft_version') in (2,3):
         from business_draft import expand
         draft=expand(draft,base_dir)
     malformed=sos.shape_errors(draft)
@@ -96,18 +96,19 @@ def repair_scope(d):
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('draft',nargs='?');ap.add_argument('--out',required=True);ap.add_argument('--starter',action='store_true',help='写出空白业务骨架并开始持久计时');ap.add_argument('--goal',default='',help='starter 使用用户的真实目标');ap.add_argument('--repair',action='store_true',help='仅修正尚未编辑的首次方案方法引用，一次机会');ap.add_argument('--base-hash',help='--repair 所依据的最新方案哈希');a=ap.parse_args()
+    if (Path(a.out).resolve().parent/'.sos-flow.json').exists():raise ValueError('当前任务由 flow.py 管理；按 flow.py <任务目录> status 返回的登记或交付动作继续，候选与审阅字段由程序生成。')
     if Path(a.out).name=='.sos-planning.json':raise ValueError('输出不能覆盖规划计时与修正记录 .sos-planning.json')
     if a.repair and (a.starter or not a.base_hash):ap.error('--repair 需要 --base-hash，且与 --starter 分开使用')
     if Path(a.out).exists() and not a.repair:raise ValueError('目标已存在；编辑现有方案请使用保存或 apply-edits，避免覆盖用户修改')
     if a.starter:
         if a.draft:ap.error('--starter 不接受输入草案')
-        draft=dict(draft_version=2,title='',goal=a.goal,mapping=dict(domain='',action='',input_condition='',capabilities=[]),inputs=[],skills=[],
+        draft=dict(draft_version=3,title='',goal=a.goal,mapping=dict(domain='',action='',input_condition='',capabilities=[]),inputs=[],skills=[],
                    work=[dict(title='',role='core',skill=None,inputs=[],questions=[],gap='',deliverables=[dict(title='',format='',criteria=[])])])
         Path(a.out).resolve().parent.mkdir(parents=True,exist_ok=True)
         with edit_lock(session_path(a.out)):
             state=session(a.out);sos.save(session_path(a.out),state)
             sos.save(a.out,draft);sos.save(Path(a.out).with_suffix('.clock.json'),{'started_epoch':state['started_epoch']})
-        print(json.dumps({'path':str(Path(a.out).resolve()),'status':'starter_written','draft':draft,'skill_fields':dict(name='',source='',method_file='',method_sections=[],fit_reason='',input_fit=''),
+        print(json.dumps({'path':str(Path(a.out).resolve()),'status':'starter_written','draft':draft,'skill_fields':dict(name='',source='',method_file='',method_sections=[],method_scope='specialist',fit_reason='',input_fit=''),
                           'next':'用上面的骨架填写真实目标、mapping 与 inputs；相关方法读到后用 method_source.py 获取章节 ID。结构字段由编译器生成。'},ensure_ascii=False))
         return
     if not a.draft:ap.error('需要草案路径或 --starter')
@@ -179,6 +180,10 @@ def main():
         result.update(review=str(review),next='核读所选方法与现有输入画像，填写适配审阅后运行 method_review.py accept '+str(Path(a.out).resolve()))
     if readiness['status']=='needs_capability' and budget['compile_attempts_remaining']:
         result['repair']=shlex.join([sys.executable,str(Path(__file__).resolve()),str(draft),'--out',str(Path(a.out).resolve()),'--repair','--base-hash',sos.digest(p)])
+    if readiness['status']!='needs_method_review':
+        from plan_delivery import prepare as delivery_prepare
+        result['delivery']=delivery_prepare(a.out)
+        result['next']=result['delivery']['next']
     print(json.dumps(result,ensure_ascii=False))
 if __name__=='__main__':
     try:main()
