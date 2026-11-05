@@ -130,13 +130,24 @@ def finished(p,base):
         v=sos.read(review)
         if v.get('plan_hash')!=c.get('plan_hash') or v.get('final_reply')!=c.get('user_message'):
             raise ValueError('交付承诺记录与已交付方案不同；使用 finish --reply 恢复')
+    if flow.is_file() and sos.read(flow).get('authoring_contract',0)>=12:
+        from closing import FILE,check_reply
+        terminal=Path(base)/FILE
+        if not terminal.is_file():raise ValueError('程序收尾记录缺失；交付最新附件后运行 finish 恢复')
+        t=sos.read(terminal)
+        if t.get('phase')!='delivered' or t.get('plan_hash')!=c.get('plan_hash') or not check_reply(t,c.get('user_message'))['consistent']:
+            raise ValueError('程序收尾与附件承诺不一致；运行 finish 恢复')
     return c
 
 def require(p,base,evidence=None,confirm=False):
-    if p.get('handoff_protocol_version')!=1:return
+    from closing import guard_failure
+    guard_failure(base)
+    path=Path(base)/'.sos-flow.json'
+    flow=sos.read(path) if path.is_file() else {}
+    controlled=flow.get('authoring_contract',0)>=12
+    if p.get('handoff_protocol_version')!=1 and not controlled:return
     delivered(p,base)
-    if p.get('flow_protocol_version')==1:
-        flow=sos.read(Path(base)/'.sos-flow.json')
+    if p.get('flow_protocol_version')==1 or controlled:
         if flow.get('phase')!='delivered':raise ValueError('规划控制器尚未完成附件登记；运行 flow.py <任务目录> receipt，不跳过交付状态。')
         if flow.get('authoring_contract',0)>=4:finished(p,base)
     if confirm:consent(evidence)

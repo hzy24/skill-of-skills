@@ -1,5 +1,5 @@
 """Pinned Tencent SkillHub file manifests, using official public file endpoints."""
-import hashlib,json,re,time
+import json,re,time
 from pathlib import Path
 from urllib.parse import quote,urlencode,urlparse
 from urllib.request import Request,build_opener,HTTPRedirectHandler
@@ -72,6 +72,7 @@ def inspect(task,slug,reason,solves,dependencies,license_text,reader=fetch):
         # Flow owns the action budget. Model thinking time is not download time,
         # and failed reads must not consume all of the semantic review slots.
         max_attempts=6 if modern else 4 if state.get('authoring_contract',0)>=6 else 3
+        if state.get('authoring_contract',0)>=13 and state.get('method_search_used'):max_attempts=8
         action_budget=state.get('authoring_contract',0)>=5
         if b['attempts']>=max_attempts or (not action_budget and time.time()-b['started']>=300):raise ValueError('候选获取预算已用完，请使用本轮已读取的方法')
         b['attempts']+=1;write(budget,b)

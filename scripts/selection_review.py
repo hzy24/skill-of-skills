@@ -105,7 +105,8 @@ def plan_issues(plan):
             if a.get('fit')!='suitable' or a.get('judged_by')!='host' or a.get('request') not in (plan.get('goal'),primary.get('request')) or not a.get('methods') or a.get('source_sha256')!=c.get('method_support',{}).get('sha256'):
                 issues.append(dict(need=need['id'],reason='核心候选需要针对原始需求的选型判断和实际方法来源'))
             if plan.get('selection_policy_version')==2:
-                if a.get('coverage') not in ('task','domain'):
+                allowed=('task','domain','method') if plan.get('method_coverage_version')==1 else ('task','domain')
+                if a.get('coverage') not in allowed:
                     issues.append(dict(need=need['id'],reason='核心选型需声明任务专用或领域方法覆盖'))
                 elif a['coverage']=='domain':
                     searches=a.get('specific_searches',[])

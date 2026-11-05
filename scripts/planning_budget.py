@@ -25,9 +25,10 @@ def status(draft,now=None):
     if controller.exists():
         state=json.loads(controller.read_text())
         if state.get('authoring_contract',0)>=5:
-            closed=state.get('phase')!='authoring' or bool(state.get('assignment_started') or state.get('discovery_closed'))
+            selecting_again=state.get('authoring_contract',0)>=11 and bool(state.get('reselection_stage'))
+            closed=state.get('phase')!='authoring' or bool(state.get('discovery_closed') or state.get('assignment_started') and not selecting_again)
             return dict(measured=True,elapsed_seconds=round(elapsed,1),stop_discovery=closed,
-                        budget_kind='bounded-actions',max_search_requests=12 if state.get('authoring_contract',0)>=7 else 8,compile_attempts=attempts,
+                        budget_kind='bounded-actions',max_search_requests=16 if state.get('authoring_contract',0)>=13 and state.get('method_search_used') else 12 if state.get('authoring_contract',0)>=7 else 8,compile_attempts=attempts,
                         next='按控制器返回的剩余动作推进；来源读取失败另用替补额度，能力契合标准保持不变。已选型则登记委托并交付。')
     compiled=any(a.get('status') in ('compiled','compiled_unresolved') for a in data.get('attempts',[]))
     unresolved=bool(data.get('attempts') and data['attempts'][-1].get('status')=='compiled_unresolved')

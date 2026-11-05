@@ -9,50 +9,8 @@ from method_source import entry,sections,select_sections
 STATE='.sos-flow.json'
 SCRIPT=Path(__file__).resolve()
 
-def compact_for_host(value,details):
-    """Keep host tool truncation from hiding the next action or method index."""
-    out=copy.deepcopy(value)
-    if not isinstance(out,dict):return out
-    out['details_file']=str(details)
-    if out.get('phase')=='awaiting_delivery' and out.get('next_tool'):
-        # The only host actions at this point; no plan/method dump before finish.
-        return {k:out[k] for k in ('phase','next_tool','receipt_command','completion_required','next','details_file','final_reply_template') if k in out}
-    def size():return len(json.dumps(out,ensure_ascii=False).encode('utf-8'))
-    for key in ('method','text'):
-        if key in out and len(out[key].encode('utf-8'))>6000:
-            out[key]=out[key].encode('utf-8')[:6000].decode('utf-8',errors='ignore');out[key+'_truncated']=True
-            if key=='text':out['truncated']=True
-    for key in ('sections','reference_files','method_index'):
-        if len(out.get(key,[]))>30:out[key]=out[key][:30];out[key+'_truncated']=True
-    if size()>12000:
-        for key in ('method','text'):
-            if key in out:
-                out[key]=out[key][:800];out[key+'_truncated']=True
-                if key=='text':out['truncated']=True
-    if size()>12000 and 'input_profile' in out:
-        out['input_profile']=[{k:v for k,v in x.items() if k not in ('sample_rows','excerpt')} for x in out['input_profile']]
-        out['profile_truncated']=True
-    if size()>12000 and out.get('candidates'):
-        # Preserve enough alternatives for semantic selection instead of losing
-        # the shortlist to generic output truncation after broad API recall.
-        for candidate in out['candidates']:
-            for key,limit in (('name',60),('description',120)):
-                if isinstance(candidate.get(key),str):candidate[key]=candidate[key][:limit]
-            candidate.pop('matched_task_terms',None)
-        while size()>12000 and len(out['candidates'])>6:
-            out['candidates'].pop();out['candidates_truncated']=True
-    if size()>12000:
-        if 'source_profile' in out:
-            out['source_profile']['identity']=out['source_profile'].get('identity','')[:600]
-        if 'method_index' in out:out['method_index']=out['method_index'][:20];out['method_index_truncated']=True
-        if 'scope_notes' in out:out['scope_notes']=[x[:200] for x in out['scope_notes'][:6]]
-    if size()>12000:
-        for key in ('input_profile','sections','reference_files'):
-            if key in out:out[key]=out[key][:3];out[key+'_truncated']=True
-    if size()>12000:
-        keep={'phase','status','next','next_tool','receipt_file','receipt_command','build_command','submit_command','assign_command','publish_command','allowed_actions','terminal','status_command','next_command','candidate','name','source','source_profile','download_bytes','installation','details_file','user_message','readiness','plan_revision','plan_hash','method_index','scope_notes','assessment_command','methods_command','reply_review','final_reply','final_reply_template'}
-        out={k:v for k,v in out.items() if k in keep};out['details_truncated']=True
-    return out
+from flow_output import compact_for_host
+
 
 def command(root,action,*args):
     return shlex.join([sys.executable,str(SCRIPT),str(root),action,*map(str,args)])
@@ -86,7 +44,7 @@ class Flow:
         if not self.path.exists():raise ValueError('先运行 init --goal 用户目标 --inputs 材料路径')
         return sos.read(self.path)
     def save(self,s):sos.save(self.path,s)
-    def init(self,goal,inputs,contract=10,new_request=None):
+    def init(self,goal,inputs,contract=15,new_request=None):
         from planning_session import resolve,session_of
         self.root=resolve(self.root,inputs);self.path=self.root/STATE
         self.root.mkdir(parents=True,exist_ok=True)
@@ -117,6 +75,10 @@ class Flow:
         return dict(self.status(),input_profile=profiles)
     def status(self):
         s=self.load();phase=s['phase']
+        if phase=='planning_failed' and s.get('authoring_contract',0)>=12:
+            from closing import record,FAILED
+            result=record(self.root,phase,FAILED)
+            return dict(result,user_message=FAILED,reply_contract=result,authoring_closed=True)
         if phase=='authoring' and s.get('authoring_contract',0)<5 and time.time()-s['started']>=300 and not s['candidates']:
             return self.blocked(s,'检索时限已到，尚未登记可用方法；保存当前任务供恢复。')
         if phase=='delivered' and s.get('authoring_contract',0)>=4:
@@ -148,9 +110,12 @@ class Flow:
             if s.get('assignment_started'):result['next']='核心委托已登记。需要额外文件制作时登记真实制作技能并 produce；否则 publish。'
         if s.get('authoring_contract',0)>=7:
             result['task_dir']=str(self.root)
+            if s.get('authoring_contract',0)>=13:
+                from method_coverage import gate
+                result['method_comparison_available']=phase=='authoring' and not s.get('method_search_used') and gate(s) is None
             result['planning_boundary']='本轮只做输入结构识别、能力选型和委托。业务统计、判断、阈值与正文由用户确认后的专业 Skill 完成。'
             if phase=='authoring':
-                result['search_rounds_remaining']=max(0,3-s['search_rounds'])
+                result['search_rounds_remaining']=max(0,3-s['search_rounds']+int(s.get('authoring_contract',0)>=13 and bool(s.get('method_search_used'))))
                 result['next']='先核读任务专用方法并 assess；领域通用方法需通过专用候选比较。选好后 assign，交付物需制作时 produce，最后 publish。'
                 if s.get('assignment_started'):
                     result['next']='委托已登记。需要转交某个已登记交付物给制作技能时 produce --takeover 文件名；否则 publish。原任务目录保持不变。'
@@ -162,6 +127,16 @@ class Flow:
             if s.get('route'):
                 result['next']='路线已登记。核对阶段分工与依赖；需要调整可再次 route 原文件，需要配套制作可 produce；完成后 publish。'
                 result['stages']=[dict(title=w['title'],skill=s['candidates'][w['candidate']]['name'],after=w.get('after',[]),outputs=[d['title'] for d in w['deliverables']]) for w in sos.read(self.root/'brief.json')['work']]
+        if phase=='authoring' and s.get('authoring_contract',0)>=11:
+            from planning_actions import actions
+            result['allowed_actions']=actions(phase, bool(s.get('route')))
+            result['route_template_command']=command(self.root,'route-template')
+            result['next']='完成选型后运行 route-template，填写返回的 route.json；程序提供实际候选编号和字段格式。'
+            if s.get('route'):
+                result['next']='路线已登记；按 route 返回的审阅表一次核对阶段目标、方法与关键前提，运行 review 后 publish。修改路线会更新受影响项。'
+                if s.get('route_review_basis'):
+                    result['next']='阶段适配判断已记录。运行 publish 交付方案；用户确认前保留业务计算给专业技能。'
+            if s.get('reselection_stage'):result['next']='仅为阶段 '+s['reselection_stage']+' 补充选型；复用原任务和其他阶段，预算保持不变。随后重新 route。'
         if phase=='awaiting_delivery':
             delivery=s.get('delivery',{})
             if 'next_tool' not in delivery:
@@ -172,7 +147,7 @@ class Flow:
             p=sos.read(self.root/'plan.json')
             result.update(render(p,phase=='delivered',s.get('blocked_reason')))
             result['plan_hash']=sos.digest(p)
-        if phase=='awaiting_delivery' and s.get('authoring_contract',0)>=8 and (self.root/'plan.json').exists():
+        if phase=='awaiting_delivery' and 8<=s.get('authoring_contract',0)<11 and (self.root/'plan.json').exists():
             result['final_reply_template']=render(p,True)['user_message']
             result['receipt_command']=command(self.root,'finish','--reply',result['final_reply_template'])+' --files <工具返回的HTML路径> <工具返回的JSON路径>'
             result['next']='交付两个附件后，将准备发送的回复交给 finish --reply 核对。候选登记不等于已安排执行；只承诺最终方案中的技能与成果。'
@@ -194,6 +169,14 @@ class Flow:
                 result['next']='原样交付 user_message 后结束。本轮保留专业 Skill 委托要求，不提出原生分析、工具技能代替或新建目录重试。'
         if phase in ('delivered','delivery_blocked','planning_failed'):
             result.pop('status_command',None);result['terminal']=True
+        if phase in ('delivered','delivery_blocked') and s.get('authoring_contract',0)>=12:
+            from closing import record,BLOCKED
+            # The closing reply describes the delivered revision. A later HTML
+            # save changes execution input, not the historical chat receipt.
+            completion=sos.read(self.root/'.sos-completion.json') if phase=='delivered' else {}
+            result['reply_contract']=record(self.root,phase,completion.get('user_message',BLOCKED),
+                completion.get('plan_hash'),completion.get('revision'))
+            result['user_message']=result['reply_contract']['final_reply']
         if phase=='awaiting_delivery' and 'next_tool' in result:
             result={'phase':phase,'next_tool':result['next_tool'],'receipt_command':result['receipt_command'],'completion_required':True,'next':'附件工具返回后立即调用 receipt_command；finish 输出前本轮尚未完成。',**{k:v for k,v in result.items() if k not in ('phase','next_tool','receipt_command','next')}}
         return result
@@ -201,7 +184,7 @@ class Flow:
         if s['phase']!='authoring':raise ValueError('本轮已生成方案；运行 status 获取交付动作，用户修改通过 HTML 保存。')
     def probe(self,input_index,column,kind,sheet=None):
         s=self.load();self.writable(s)
-        if s.get('assignment_started'):return self.status()
+        if s.get('authoring_contract',0)<11 and s.get('assignment_started') and not s.get('reselection_stage'):return self.status()
         if not 1<=input_index<=len(s['inputs']):raise ValueError('输入编号从1开始，使用 init 已登记的材料')
         key=json.dumps([input_index,column,kind,sheet]);cache=s.setdefault('probes',{})
         if key in cache:return dict(cache[key],cached=True)
@@ -209,10 +192,79 @@ class Flow:
         from profile_inputs import probe
         result=probe(s['inputs'][input_index-1]['path'],column,kind,sheet);cache[key]=result;self.save(s)
         return dict(result,next='仅用此结果确定时间范围或字段口径；分组指标、比较结论、归因和建议在确认后由选定 Skill 执行。')
+    def material(self,input_index,section=None):
+        from profile_inputs import document_profile
+        s=self.load();self.writable(s)
+        if not 1<=input_index<=len(s['inputs']):raise ValueError('使用 init 返回的材料编号')
+        key=str(input_index)+':'+str(section);cache=s.setdefault('material_reads',{})
+        if key in cache:return dict(cache[key],cached=True)
+        if section is not None and sum(not k.endswith(':None') for k in cache)>=4:
+            return dict(status='material_probe_budget_used',next='已完成四段材料补读；按现有材料结构与原文确定阶段职责，完整阅读留给专业执行。')
+        result=document_profile(Path(s['inputs'][input_index-1]['path']),section)
+        cache[key]=result;self.save(s)
+        return dict(result,scope='仅核对材料内容与方法前提；业务判断与成果在确认后生成。')
+    def route_template(self):
+        from task_route import template
+        s=self.load();self.writable(s);draft,choices=template(s);path=self.root/'route.json'
+        if not path.exists():sos.save(path,s.get('route') or draft)
+        existing=sos.read(path)
+        if existing==dict(reason='',deliver=[],stages=[dict(title='',candidate='',question='',method='',outputs=[],checks=[],after=[])]):sos.save(path,draft)
+        return dict(phase='authoring',route_file=str(path),template=sos.read(path),candidates=choices,
+                    next='按业务结果填写阶段；candidate 使用上表编号，after 使用上游阶段标题。配套制作角色自动沿用登记结果，无需重复 assess 或填写 role。完整填写后运行 route。',
+                    route_command=command(self.root,'route',path))
+    def view(self,result_id,page=1,field=None):
+        from flow_output import read_page
+        return read_page(self.root,result_id,page,field)
+    def review(self,path):
+        from method_review import accept,basis,record
+        s=self.load();self.writable(s)
+        if s.get('reselection_stage'):raise ValueError('补充选型后先 route 登记当前路线，再核对阶段适配')
+        preview=self.root/'.sos-route-plan.json'
+        if not preview.exists():return self.build(review_only=True)
+        p=sos.read(preview)
+        if s.get('route_review_input')!=sos.digest(sos.read(self.root/'brief.json')):return self.build(review_only=True)
+        if p.get('review_submission_version')==2:
+            from review_form import accept_file
+            checked=accept_file(p,path,self.root)
+        else:
+            from review_form import ReviewInputError
+            try:checked=accept(p,sos.read(path),self.root)
+            except ReviewInputError as error:
+                if any('审阅对象已更改' in e['message'] for e in error.result['diagnostics']):
+                    restored=self.build(review_only=True)
+                    error.result.update(status='review_context_refreshed',
+                        **{k:restored[k] for k in ('review_file','review_command')},
+                        next='程序已恢复旧版审阅表的来源与阶段字段，并保留本版判断；核对后运行 review_command 重新提交。')
+                raise
+        data=record(checked)
+        sos.save(self.root/'.sos-route-review-record.json',data)
+        if checked['professional_review']['verdict']!='pass':
+            s.pop('route_review_basis',None);self.save(s)
+            return dict(phase='authoring',status='route_changes_required',issues=[dict(stage=r.get('stage'),reason=r['reason']) for r in data['items'] if r['verdict']!='pass'],
+                        next='修正对应阶段后重新 route；需要其他能力时 reselect 阶段标题，保留其他阶段和原预算。')
+        s['route_review_basis']=basis(p);self.save(s)
+        return dict(phase='authoring',status='route_reviewed',verification='host_stage_fit_judgment',next_command=command(self.root,'publish'),next='运行 publish 交付 plan.html 与 plan.json，等待用户确认。')
+    def reselect(self,title,reason):
+        s=self.load();self.writable(s)
+        if s.get('authoring_contract',0)<11 or title not in {r['title'] for r in s.get('route',{}).get('stages',[])}:raise ValueError('使用已登记路线中的阶段标题')
+        s['reselection_stage']=title;s['discovery_closed']=False;s.pop('route_review_basis',None)
+        s.setdefault('reselection_history',[]).append(dict(stage=title,reason=text(reason,'reason')));self.save(s)
+        return self.status()
     def search(self,queries,focus=None,category=None,level='task'):
         s=self.load();self.writable(s)
-        if s.get('assignment_started'):return self.status()
-        if s.get('discovery_closed') or s['search_rounds']>=(3 if s.get('authoring_contract',0)>=7 else 2) or (s.get('authoring_contract',0)<5 and time.time()-s['started']>=300):
+        if s.get('assignment_started') and not s.get('reselection_stage'):return self.status()
+        method_search=s.get('authoring_contract',0)>=13 and level=='method'
+        if method_search:
+            from method_coverage import gate
+            issue=gate(s)
+            if issue:return dict(status='method_comparison_required',reason=issue,next='核读并登记本任务候选的实际方法覆盖，再选择方法检索。',budget_consumed=False)
+            if s.get('method_search_used'):
+                if s.get('authoring_contract',0)>=15:
+                    return self.search_checkpoint(s,'方法比较检索已完成；复用已召回结果，继续核读和选型。',method_only=True)
+                return self.end_discovery(s,'方法比较检索已完成，复用已核读候选')
+        if s.get('discovery_closed') or (not method_search and s['search_rounds']-int(s.get('authoring_contract',0)>=13 and bool(s.get('method_search_used')))>=(3 if s.get('authoring_contract',0)>=7 else 2)) or (s.get('authoring_contract',0)<5 and time.time()-s['started']>=300):
+            if s.get('authoring_contract',0)>=15 and not s.get('discovery_closed'):
+                return self.search_checkpoint(s,'检索轮次已用完；继续核读已召回候选，保留实际适配标准。')
             return self.end_discovery(s,'搜索轮次或时间预算已用完')
         if s.get('authoring_contract',0)>=7 and level=='domain':
             from selection_review import domain_gate
@@ -222,7 +274,11 @@ class Flow:
         from discovery_scope import create,filter_results,chinese_queries,concept_scope,query_plan
         if s.get('authoring_contract',0)>=5:
             from discovery_scope import QueryConceptError
-            try:queries=query_plan(queries,preserve_phrases=s.get('authoring_contract',0)>=8,atomic=s.get('authoring_contract',0)>=9)
+            try:
+                if method_search:
+                    from discovery_scope import method_queries
+                    queries=method_queries(queries)
+                else:queries=query_plan(queries,preserve_phrases=s.get('authoring_contract',0)>=8,atomic=s.get('authoring_contract',0)>=9)
             except QueryConceptError as e:
                 return dict(status='query_concepts_required',request=s['goal'],reason=str(e),
                     network_requests=0,budget_consumed=False,next='保留原始需求；将中文业务对象与专业岗位分别作为 search 参数。无需读取或修改字段文件。')
@@ -242,7 +298,9 @@ class Flow:
             scoped=create(s['goal'],focus,queries)
             s['discovery_scope']['anchors']=list(dict.fromkeys(s['discovery_scope']['anchors']+scoped['anchors']))
             s['discovery_scope']['queries']=list(dict.fromkeys(s['discovery_scope']['queries']+scoped['queries']))
-        s['search_rounds']+=1;self.save(s)
+        s['search_rounds']+=1
+        if method_search:s['method_search_used']=True
+        self.save(s)
         r=search(self.root,queries,category=category) if category else search(self.root,queries)
         if s.get('discovery_scope'):r=filter_results(r,s['discovery_scope'])
         out=self.root/('search-'+str(s['search_rounds'])+'.json');sos.save(out,r)
@@ -257,10 +315,38 @@ class Flow:
         if s.get('discovery_scope'):
             result.update(focus=s['discovery_scope']['focus'],excluded_count=len(r.get('excluded',[])))
             if not r['candidates']:result['next']='当前结果没有本次专业对象。下一轮用中文领域名、同义词或上位专业概念，保持 focus；检索词无需重复用户原话。'
+        if method_search:result['next']='核读实际分析方法；采用时 assess --coverage method --method 章节 --scope 负责范围 --limit 未覆盖判断及处理 --reason 比较理由。方法比较只增加本轮检索和至多两个候选核读名额。'
         return result
+    def search_checkpoint(self,s,reason,method_only=False):
+        """Search budget and method-reading budget are independent phases."""
+        from search_skills import summary
+        history=s.get('search_history',[])
+        paths=[self.root/('search-'+str(i+1)+'.json') for i,h in enumerate(history)
+               if not method_only or h.get('level')=='method']
+        paths=[p for p in paths if p.is_file()]
+        attempts={k.split('::')[0] for k in s.get('inspections',{})}
+        remaining=self.inspection_limit(s)-s['inspect_attempts']
+        if paths and remaining>0:
+            data=sos.read(paths[-1])
+            data['candidates']=[c for c in data['candidates'] if c['slug'] not in attempts]
+            if data['candidates']:
+                result=summary(data,paths[-1])
+                return dict(result,phase='authoring',status='inspection_required',reason=reason,
+                    budget_consumed=False,candidate_attempts_remaining=remaining,
+                    next='从 candidates 选与当前问题相关的方法，运行 inspect；本次未新增搜索请求。',
+                    inspect_command=command(self.root,'inspect','搜索返回的slug'))
+        return self.end_discovery(s,reason)
     def end_discovery(self,s,reason):
+        if s.get('authoring_contract',0)>=13 and not s.get('method_search_used'):
+            from method_coverage import gate
+            selected=any(c.get('assessment',{}).get('fit')=='suitable' for c in s['candidates'].values() if c.get('registration_role','core')=='core')
+            if not selected and not gate(s):
+                return dict(phase='authoring',status='method_comparison_available',budget_consumed=False,
+                    next='当前已核读候选未获选。可比较能承担具体问题的通用方法：search 中文方法短词 --level method；方法覆盖与业务边界写入方案。保留原任务和所有比较记录。',
+                    search_command=command(self.root,'search','中文方法短词','--level','method'))
         s['discovery_closed']=True;s['closed_attempts']=s.get('closed_attempts',0)+1;self.save(s)
-        usable=[c for c in s['candidates'].values() if c.get('registration_role','core')=='core' and c.get('source_profile',{}).get('kind') in ('specialty_candidate','unclassified')]
+        kinds=('specialty_candidate','unclassified','general_analysis') if s.get('authoring_contract',0)>=13 else ('specialty_candidate','unclassified')
+        usable=[c for c in s['candidates'].values() if c.get('registration_role','core')=='core' and c.get('source_profile',{}).get('kind') in kinds]
         from capability_profile import task_kind
         if task_kind(s['goal'])=='artifact':usable=list(s['candidates'].values())
         if s.get('authoring_contract',0)>=6:
@@ -284,8 +370,8 @@ class Flow:
             if digest(proposal)!=result['proposal_hash']:raise ValueError('候选提案发生变化')
         ident='c-'+hashlib.sha256((source+hashlib.sha256(raw).hexdigest()).encode()).hexdigest()[:10]
         from capability_profile import classify
-        value=dict(name=name,source=source,origin=origin,registration_role=role,method_file=str(path.resolve()),sha256=hashlib.sha256(raw).hexdigest(),sections=sections(body),source_profile=classify(raw.decode('utf-8'),2 if s.get('authoring_contract',0)>=9 else 1))
-        if s.get('assignment_started') and value['source_profile']['kind']!='artifact_tool':
+        value=dict(name=name,source=source,origin=origin,registration_role=role,method_file=str(path.resolve()),sha256=hashlib.sha256(raw).hexdigest(),sections=sections(body),source_profile=classify(raw.decode('utf-8'),3 if s.get('authoring_contract',0)>=13 else 2 if s.get('authoring_contract',0)>=9 else 1))
+        if s.get('assignment_started') and not s.get('reselection_stage') and value['source_profile']['kind']!='artifact_tool':
             return dict(status='discovery_closed',next='编排阶段只补登记本地制作工具。专业工作复用已选能力，继续 assign 或 publish。')
         if source_terms:
             from discovery_scope import terms,hits
@@ -343,12 +429,18 @@ class Flow:
         if s.get('authoring_contract',0)>=7:
             result['selection_scope']='task：方法直接解决具体业务问题。domain：采用同领域通用方法，需要先保留专用检索与取舍记录。跨领域通用统计不能替代业务专业能力。'
             result['assessment_command']+=' --coverage task'
+        if s.get('authoring_contract',0)>=13:
+            result['selection_scope']='task：直接解决业务问题；domain：同领域方法；method：有来源的可迁移方法，需保留业务候选比较并登记 scope、limit 和实际 method 章节。通用方法承担其已说明的分析范围，业务判断按材料依据及方案边界处理。'
         if s.get('authoring_contract',0)>=8:
             from selection_review import method_choices
             result['method_index']=method_choices(value)
             result['assessment_command']=command(self.root,'assess',ident)+' --fit suitable --reason <专业方法如何完成用户需求>'
             result['methods_command']=command(self.root,'methods',ident)
             result['next']='核读用途、方法及限制后判断适配性；默认委托完整工作流，省略 --method。仅取部分能力时使用目录序号或完整标题，多个 --method 可重复。编号无需抄写。'
+        if s.get('authoring_contract',0)>=15:
+            result['registration_role']=role
+            result['next']=('配套制作能力已登记。route 中引用该编号，并用 after 接收上游专业成果；制作角色自动传递，无需 assess。'
+                            if role=='support' else '核读用途与方法后运行 assess；只取部分方法时用 methods/section。获选后按业务阶段填写 route.json。')
         return result
     def inspection_limit(self,s):
         # An unavailable source may use one replacement request. Rejections
@@ -356,11 +448,12 @@ class Flow:
         failed=sum(x.get('status')=='candidate_unavailable' for x in s.get('inspections',{}).values())
         if s.get('authoring_contract',0)>=7:
             failed+=sum(x.get('status')=='candidate_unavailable' for k,x in s.get('local_attempts',{}).items() if not k.endswith(':support'))
-            return min(6,3+failed)
+            extra=2 if s.get('authoring_contract',0)>=13 and s.get('method_search_used') else 0
+            return min(6+extra,3+extra+failed)
         return 3+min(1,failed) if s.get('authoring_contract',0)>=6 else 3
     def inspect(self,slug,source_terms=None):
         s=self.load();self.writable(s)
-        if s.get('assignment_started'):return self.status()
+        if s.get('assignment_started') and not s.get('reselection_stage'):return self.status()
         cache=s.setdefault('inspections',{})
         cache_key=slug+('::'+json.dumps(source_terms,ensure_ascii=False) if source_terms else '')
         if cache_key in cache:
@@ -373,9 +466,8 @@ class Flow:
             if s.get('authoring_contract',0)>=6:
                 c=s['candidates'][previous['candidate']]
                 return dict(candidate=previous['candidate'],name=c['name'],already_registered=True,assessment=c.get('assessment'),
-                            next='该候选已淘汰，选择其他专业能力。' if c.get('assessment',{}).get('fit')=='unsuitable' else '复用已读原文；完成 assess 后 assign。')
+                            next='该候选已淘汰，选择其他专业能力。' if c.get('assessment',{}).get('fit')=='unsuitable' else '复用已读原文；完成 assess 后登记路线。')
             return dict(candidate=previous['candidate'],name=previous['name'],already_registered=True,next='候选已登记。继续 assign 委托；必要配套文档用 resource。' if s.get('authoring_contract',0)>=5 else '该候选已核读并登记；复用原文，填写 brief.json。必要配套文档用 resource。')
-        from search_skills import search
         records=[]
         for f in self.root.glob('search-*.json'):records+=sos.read(f)['candidates']
         if not any(c['slug']==slug for c in records):raise ValueError('inspect 只接收本任务实际搜索返回的 slug')
@@ -397,7 +489,7 @@ class Flow:
         s=self.load();s.setdefault('inspections',{})[cache_key]=result;self.save(s);return result
     def local(self,path,focus=None,terms=None,role='core'):
         s=self.load();self.writable(s)
-        if s.get('assignment_started') and role!='support':return self.status()
+        if s.get('assignment_started') and not s.get('reselection_stage') and role!='support':return self.status()
         if s.get('authoring_contract',0)>=5 and focus:
             from discovery_scope import concept_scope,query_plan
             s['discovery_scope']=concept_scope(s['goal'],query_plan(terms or [focus]),s.get('discovery_scope'));focus=None;self.save(s)
@@ -410,6 +502,25 @@ class Flow:
             self.save(s)
         path=Path(path).resolve()
         if path.is_dir():path=path/'SKILL.md'
+        if s.get('authoring_contract',0)>=15 and path.is_file():
+            raw=path.read_bytes();sha=hashlib.sha256(raw).hexdigest()
+            from capability_profile import classify
+            profile=classify(raw.decode('utf-8'),3)
+            if role=='support' and profile['kind']!='artifact_tool':
+                return dict(status='support_role_mismatch',source_profile=profile,
+                    reason='该入口提供分析或专业方法，配套制作角色只接收文件制作能力。',
+                    next='复用原候选编号按实际方法安排专业阶段；如需单独制作文件，登记已安装的文件制作技能。原候选来源和选型保持不变。')
+            existing=next(((k,c) for k,c in s['candidates'].items() if c['origin']=='external' and
+                           (Path(c['method_file']).resolve()==path or c['sha256']==sha)),None)
+            if existing:
+                ident,c=existing
+                if c['sha256']!=sha:raise ValueError('已登记方法文件发生变化，保留原任务与候选快照')
+                if role=='support':c['registration_role']='support';self.save(s)
+                return dict(candidate=ident,name=c['name'],origin='external',already_registered=True,
+                    registration_role=c.get('registration_role','core'),assessment=c.get('assessment'),
+                    next='这是已核读的外部候选，复用原编号与安装提案；下载的方法文档不代表已安装。按实际适配安排路线。')
+            if path.is_relative_to(self.root):
+                raise ValueError('任务目录内的方法副本不登记为已安装能力；外部候选复用 inspect 返回的编号')
         key=str(path)+':'+role;cache=s.setdefault('local_attempts',{})
         if key in cache:
             old=cache[key]
@@ -420,7 +531,7 @@ class Flow:
             if s.get('authoring_contract',0)<5 and reuse[key]>=2:return self.end_discovery(s,'候选登记信息已重复返回，结束检索')
             if s.get('authoring_contract',0)>=6:
                 return dict(candidate=old['candidate'],name=c['name'],already_registered=True,assessment=c.get('assessment'),
-                            next='该候选已淘汰，选择其他专业能力。' if c.get('assessment',{}).get('fit')=='unsuitable' else '复用已读原文；核心能力完成 assess 后 assign，制作配套用 produce。')
+                            next='该候选已淘汰，选择其他专业能力。' if c.get('assessment',{}).get('fit')=='unsuitable' else '复用已读原文；核心能力完成 assess 后登记路线，配套能力直接引用原编号。')
             return dict(candidate=old['candidate'],name=c['name'],already_registered=True,next='候选已登记。继续 assign 委托。' if s.get('authoring_contract',0)>=5 else '复用已读方法与章节，继续填写 brief.json。')
         counter='support_attempts' if s.get('authoring_contract',0)>=5 and role=='support' else 'inspect_attempts'
         if (s.get('discovery_closed') and counter!='support_attempts') or s.get(counter,0)>=(3 if counter=='support_attempts' else self.inspection_limit(s)) or (s.get('authoring_contract',0)<5 and time.time()-s['started']>=300):return self.end_discovery(s,'候选核读预算已用完')
@@ -430,8 +541,23 @@ class Flow:
         s=self.load();s.setdefault('local_attempts',{})[key]=result;self.save(s);return result
     def section(self,candidate,section):
         s=self.load();self.writable(s);c=s['candidates'].get(candidate)
-        if s.get('assignment_started'):return self.status()
+        if s.get('authoring_contract',0)<11 and s.get('assignment_started') and not s.get('reselection_stage'):return self.status()
         if not c:raise ValueError('未知候选编号')
+        if s.get('authoring_contract',0)>=15:
+            from selection_review import catalog,resolve_methods,MethodChoiceError,method_choices
+            rows=catalog(c)
+            try:refs=resolve_methods(rows,[section])
+            except MethodChoiceError as error:
+                return dict(status='choose_existing_section',candidate=candidate,reason=str(error),
+                            method_index=method_choices(c),budget_consumed=False,next='使用 methods 目录中的序号、完整标题或 ref；本次未消耗补读额度。')
+            if len(refs)!=1:raise ValueError('section 每次读取一个章节')
+            key=candidate+':'+refs[0];reads=s.setdefault('section_reads',[])
+            cached=key in reads
+            if not cached and len(reads)>=2:return dict(status='section_budget_used',next='按已读方法完成适配判断；完整方法留给执行。')
+            if not cached:reads.append(key);self.save(s)
+            row=next(r for r in rows if r['ref']==refs[0])
+            return dict(candidate=candidate,section=row['ref'],title=row['title'],text=row['text'],
+                        cached=cached,budget_consumed=not cached,next='依据该原文核对适配性，再 assess 或填写阶段委托。')
         reads=s.setdefault('section_reads',[]);key=candidate+':'+section
         if key in reads:return dict(already_read=True,next='该章节已返回；复用原文完成 assess 选型，再 assign 委托。' if s.get('authoring_contract',0)>=6 else '该章节已返回；复用已有方法，完整写入 brief.json 后 submit。')
         if len(reads)>=2:return dict(stop_reading=True,next='补读结束；根据已读原文完成选型判断。')
@@ -449,14 +575,14 @@ class Flow:
         return result
     def resource(self,candidate,path):
         s=self.load();self.writable(s);c=s['candidates'].get(candidate)
-        if s.get('assignment_started'):return self.status()
+        if s.get('authoring_contract',0)<11 and s.get('assignment_started') and not s.get('reselection_stage'):return self.status()
         if not c:raise ValueError('未知候选编号')
         from acquire import safe_rel,verify_file,digest
         path=safe_rel(path)
         if Path(path).suffix.lower() not in ('.md','.json','.yaml','.yml','.txt'):raise ValueError('规划阶段只补读方法文档，不下载执行脚本或依赖')
         resources=c.setdefault('resources',{})
         if path in resources:
-            if s.get('authoring_contract',0)>=5:return dict(already_read=True,next='文档已登记，程序自动绑定来源。继续 assign 登记委托。')
+            if s.get('authoring_contract',0)>=5:return dict(already_read=True,next='文档已登记，程序自动绑定来源。按已读方法登记路线。')
             return dict(already_read=True,sections=resources[path]['index'],next='复用已读规则；用返回的完整章节 ID 填 questions 内的 methods.section。')
         reads=s.setdefault('section_reads',[])
         if len(reads)>=2:return dict(stop_reading=True,next='补读结束；用已读方法 assign 委托并 publish。' if s.get('authoring_contract',0)>=5 else '本轮补读已结束；根据已读方法形成委托，尚无方法的问题留空 methods。')
@@ -540,12 +666,13 @@ class Flow:
                 profile=classify(Path(c['method_file']).read_text(),c['source_profile'].get('profile_version',1))
                 explanation=w.get('expertise')
                 if isinstance(explanation,dict):explanation=explanation.get('reason')
-                issue=core_issue(s['goal'],profile,dict(request=s['goal'],specialty=c.get('assessment',{}).get('professional_purpose',profile['identity']),reason=explanation))
+                adoption=c.get('assessment') if s.get('authoring_contract',0)>=13 and c.get('assessment',{}).get('coverage')=='method' else None
+                issue=core_issue(s['goal'],profile,dict(request=s['goal'],specialty=c.get('assessment',{}).get('professional_purpose',profile['identity']),reason=explanation),adoption)
                 if issue:missing.append(issue)
                 from discovery_scope import source_issue
                 from capability_profile import task_kind
                 format_task=task_kind(s['goal'])=='artifact' and profile['kind']=='artifact_tool'
-                issue=source_issue(s.get('discovery_scope'),profile['identity'],[x['section'] for x in applications]) if not format_task else None
+                issue=source_issue(s.get('discovery_scope'),profile['identity'],[x['section'] for x in applications]) if not format_task and adoption is None else None
                 if issue:missing.append(issue)
             # Declared gaps cannot be waived by a second, contradictory pass field.
             use=bool(c and not missing and role!='basic')
@@ -577,25 +704,34 @@ class Flow:
             keys(decision,('question','affects','reason'),'decisions')
             draft['open_questions'].append(dict(decision,blocking=True))
         return draft,coverage_by_work
-    def assess(self,candidate,fit,reason,methods=(),limits=(),coverage='task',purpose=None):
+    def assess(self,candidate,fit,reason,methods=(),limits=(),coverage='task',purpose=None,scope=None):
         s=self.load()
-        if s['phase']!='authoring' or s.get('assignment_started'):return self.status()
+        if s['phase']!='authoring' or (s.get('assignment_started') and not s.get('reselection_stage')):return self.status()
         if candidate not in s['candidates']:raise ValueError('使用核读结果中的候选编号')
         from selection_review import assess
         c=s['candidates'][candidate]
+        method_adoption=s.get('authoring_contract',0)>=13 and coverage=='method'
+        if coverage=='method' and not method_adoption:raise ValueError('当前旧任务保留原选型协议；新任务支持方法覆盖选型')
+        if method_adoption and fit=='suitable':
+            from method_coverage import gate,issue as method_issue
+            problem=gate(s,candidate) or method_issue(c['source_profile'],dict(coverage=coverage,scope=scope,methods=list(methods),limits=list(limits)))
+            if problem:
+                from selection_review import method_choices
+                return dict(status='method_coverage_required',candidate=candidate,reason=problem,method_index=method_choices(c),
+                    next='复用本次候选与来源；填写 --coverage method --scope 负责的问题与结果 --method 实际章节 --limit 未覆盖判断及处理 --reason 比较理由。')
         specialty=None
         if purpose is not None and fit=='suitable':
             chosen=next((v for v in c['source_profile'].get('purpose_options',[]) if v['number']==purpose),None)
             if not chosen:return dict(status='purpose_choice_required',candidate=candidate,purpose_options=c['source_profile'].get('purpose_options',[]),next='使用用途列表中的编号；无需抄写或翻译原文。')
             specialty=chosen['text']
-        if s.get('authoring_contract',0)>=9 and fit=='suitable' and c.get('registration_role','core')=='core':
+        if s.get('authoring_contract',0)>=9 and fit=='suitable' and c.get('registration_role','core')=='core' and not method_adoption:
             from capability_profile import responsibility_issue,core_issue
             profile=c['source_profile']
             issue=responsibility_issue(s['goal'],profile,specialty)
             if not issue:issue=core_issue(s['goal'],profile,dict(request=s['goal'],specialty=specialty or profile['identity'],reason=reason))
             if issue:
                 return dict(status='core_choice_rejected',candidate=candidate,reason=issue,purpose_options=profile.get('purpose_options',[]),
-                    source_purpose=profile['identity'],next='保留原始任务，选择承担业务判断的专业方法；配套工具不接管核心。')
+                    source_purpose=profile['identity'],next='保留原始任务，选择承担业务判断的专业方法；配套工具不接管核心。' if s.get('authoring_contract',0)<13 or profile['kind']=='artifact_tool' else '若原文提供可承担当前问题的分析方法，使用 --coverage method 登记实际章节、负责范围与判断边界，并保留业务候选比较。')
         if s.get('authoring_contract',0)>=7 and fit=='suitable' and coverage=='domain':
             from selection_review import domain_gate
             issue=domain_gate(s,candidate)
@@ -615,10 +751,13 @@ class Flow:
                 decision['specific_searches']=[x for x in s.get('search_history',[]) if x['level']=='task']
         if s.get('authoring_contract',0)>=9 and fit=='suitable':
             decision['professional_purpose']=specialty or c['source_profile']['identity']
+        if method_adoption and fit=='suitable':
+            from method_coverage import evidence
+            decision.update(scope=scope.strip(),**evidence(s,candidate))
         c['assessment']=decision
         self.save(s)
         return dict(candidate=candidate,name=c['name'],assessment=c['assessment'],
-                    next='已淘汰；继续选择其他专业能力。' if fit=='unsuitable' else '选型判断已登记。确认其他已核读核心候选的取舍后 assign；首个核心委托自动保留完整原始需求。')
+                    next='已淘汰；继续选择其他专业能力。' if fit=='unsuitable' else '选型判断已登记。确认其他已核读核心候选的取舍后登记业务路线；各阶段分别约定问题、方法与结果。')
     def methods(self,candidate):
         from selection_review import method_choices
         s=self.load();self.writable(s)
@@ -688,10 +827,10 @@ class Flow:
                 result=self.assign(row['candidate'],row['title'],row['method'],[row['question']],row['outputs'],row['checks'],
                                    'support' if row['role']=='production' else 'core',after,_production=row['role']=='production')
                 if result.get('status')=='core_choice_rejected':raise ValueError(result['reason'])
-            s=self.load();s['route']=route;self.save(s)
+            s=self.load();s['route']=route;s.pop('reselection_stage',None);s.pop('route_review_basis',None);self.save(s)
         except (ValueError,KeyError,TypeError,OSError):
             (self.root/'brief.json').write_bytes(previous);self.save(original);raise
-        return self.status()
+        return self.build(review_only=True) if s.get('authoring_contract',0)>=11 else self.status()
 
     def assign(self,candidate,title,reason,questions,outputs,checks,role='core',after=(),limits=(),_production=False):
         s=self.load()
@@ -712,7 +851,8 @@ class Flow:
         if role=='core':
             from capability_profile import core_issue
             profile=s['candidates'][candidate]['source_profile']
-            issue=core_issue(s['goal'],profile,dict(request=s['goal'],specialty=s['candidates'][candidate].get('assessment',{}).get('professional_purpose',profile['identity']),reason=reason))
+            adoption=s['candidates'][candidate].get('assessment') if s.get('authoring_contract',0)>=13 and s['candidates'][candidate].get('assessment',{}).get('coverage')=='method' else None
+            issue=core_issue(s['goal'],profile,dict(request=s['goal'],specialty=s['candidates'][candidate].get('assessment',{}).get('professional_purpose',profile['identity']),reason=reason),adoption)
             if issue:return dict(self.status(),status='core_choice_rejected',reason=issue,next='选择已经核读的专业候选承担核心委托；制作工具可用 --role support 登记。')
         from assignment import item
         work=item(candidate,title,reason,questions,outputs,checks,role,after)
@@ -759,7 +899,7 @@ class Flow:
         return dict(status='repair_brief_once',error=error,brief=str(self.root/'brief.json'),
                     next_command=command(self.root,'submit',self.root/'brief.json'),
                     next='用 Write 完整替换 brief.json 一次，保留原需求及已选方法；再次 submit。按错误信息修正，无需查看控制器源码。')
-    def build(self):
+    def build(self,review_only=False):
         s=self.load()
         if s['phase']!='authoring':return self.status()
         raw=(self.root/'brief.json').read_bytes();fingerprint=hashlib.sha256(raw).hexdigest()
@@ -785,16 +925,18 @@ class Flow:
         except (ValueError,KeyError,TypeError,OSError) as e:
             return self.authoring_error(s,str(e),raw)
         s['submitted_hash']=fingerprint
-        return self.publish(s,p,coverage)
+        return self.publish(s,p,coverage,review_only=review_only)
     def blocked(self,s,reason):
         # A valid, explicitly unresolved plan terminates schema-repair loops.
         from prepare_plan import prepare
         d=dict(draft_version=3,title=s['goal'],goal=s['goal'],mapping=dict(domain='原任务',action=s['goal'],input_condition='已登记原始材料',capabilities=[s['goal']]),inputs=s['inputs'],skills=[],constraints=['本轮规划未完成：'+reason],work=[dict(title=s['goal'],role='core',skill=None,inputs=[x['name'] for x in s['inputs']],questions=[s['goal']],gap='规划草案未通过校验，保留原需求与修复记录供继续处理',deliverables=[dict(title='目标成果',format='md',criteria=[s['goal']])])])
         p,_=prepare(d,self.root);s['blocked_reason']=reason
         return self.publish(s,p,[])
-    def publish(self,s,p,coverage):
+    def publish(self,s,p,coverage,review_only=False):
         p['review_protocol_version']=2;p['handoff_protocol_version']=1;p['flow_protocol_version']=1
         p['profile_policy_version']=1
+        if s.get('authoring_contract',0)>=13:p['method_coverage_version']=1
+        if s.get('authoring_contract',0)>=14:p['review_submission_version']=2
         try:b=sos.read(self.root/'brief.json')
         except (ValueError,OSError):b={}
         if not isinstance(b,dict):b={}
@@ -810,6 +952,10 @@ class Flow:
                 candidate['source_profile']=classify(Path(source['method_file']).read_text(),source['source_profile'].get('profile_version',1))
                 if s.get('authoring_contract',0)>=6:
                     candidate['selection_assessment']=copy.deepcopy(source.get('assessment',{}))
+                    if source.get('assessment',{}).get('coverage')=='method':
+                        from method_coverage import disclosure
+                        note=disclosure(candidate['name'],source['assessment'])
+                        if note not in p['constraints']:p['constraints'].append(note)
         authored_work=b.get('work',[])
         if not isinstance(authored_work,list):authored_work=[authored_work]
         authored_work=[w if isinstance(w,dict) else {} for w in authored_work]
@@ -846,10 +992,44 @@ class Flow:
             apply(p,s['route'])
             sos.require_plan(p)
         from method_review import packet,accept,basis
+        if s.get('authoring_contract',0)>=11:
+            p['stage_review_version']=1
+            # A candidate's suitability never automatically approves newly authored stages.
+            review_path=self.root/'route-review.json';record=self.root/'.sos-route-review-record.json'
+            previous=sos.read(record) if record.exists() else None
+            from method_review import sources
+            current_sources=p.get('review_submission_version')!=2 or previous and previous.get('source_hashes')==sources(p,self.root)
+            if not review_only and s.get('route_review_basis')==basis(p) and previous and current_sources:
+                p=accept(p,previous,self.root)
+                if p['professional_review']['verdict']!='pass':raise ValueError('阶段适配尚未通过')
+            else:
+                from method_review import reuse_items
+                review=reuse_items(packet(p,self.root),previous)
+                sos.save(self.root/'.sos-route-plan.json',p)
+                s['route_review_input']=sos.digest(sos.read(self.root/'brief.json'));self.save(s)
+                if p.get('review_submission_version')==2:
+                    from review_form import prepare
+                    result=prepare(p,self.root,previous)
+                    return dict(result,phase='authoring',status='stage_review_required',
+                                review_command=command(self.root,'review',result['review_file']),
+                                next='阅读 context_file；只在 review_file 填写各阶段 need、verdict、reason。理由涵盖方法适配、输入前提和结论范围。提交 review_command；引用、来源版本与阶段信息由程序维护。')
+                # Repair program-owned fields while retaining pending host judgments.
+                if review_path.exists():
+                    try: old=sos.read(review_path)
+                    except (ValueError,OSError): old={}
+                    if isinstance(old,dict) and old.get('basis_hash')==review['basis_hash'] and old.get('source_hashes')==review['source_hashes']:
+                        prior={r.get('need'):r for r in old.get('items',[]) if isinstance(r,dict)}
+                        for row in review['items']:
+                            for key in ('verdict','reason','input_basis','limits'):
+                                if key in prior.get(row['need'],{}):row[key]=prior[row['need']][key]
+                sos.save(review_path,review)
+                return dict(phase='authoring',status='stage_review_required',review_file=str(review_path),
+                            review=review,review_command=command(self.root,'review',review_path),
+                            next='填写此表各阶段的 verdict/reason/input_basis/limits 后 review。程序已恢复来源与阶段信息，保留本版待提交判断。')
         review=packet(p,self.root)
         from capability_profile import issues
         all_supported=not issues(p) and all(n['decision'].get('fit')=='supported' for n in p['capability_needs'] if n.get('task_kind')!='basic')
-        if all_supported:
+        if all_supported and s.get('authoring_contract',0)<11:
             for r in review['items']:
                 n=next(x for x in p['capability_needs'] if x['id']==r['need']);c=next(x for x in p['capability_candidates'] if x['id']==n['decision']['candidate_id'])
                 r.update(verdict='pass',reason=n['decision']['reason'],input_basis=c['evidence'][0]['finding'],limits='按委托执行；宿主判断技能适配，程序绑定真实来源，专业 Skill 负责字段解释、适用条件和专业验证')
@@ -878,7 +1058,7 @@ class Flow:
     def receipt(self,paths=None,reply=None):
         s=self.load()
         if s['phase'] not in ('awaiting_delivery','delivery_blocked','delivered'):return self.status()
-        if s.get('authoring_contract',0)>=8 and reply is None:
+        if 8<=s.get('authoring_contract',0)<11 and reply is None:
             from plan_message import render
             p=sos.read(self.root/'plan.json')
             return dict(phase=s['phase'],status='reply_review_required',completion_required=True,
@@ -903,9 +1083,15 @@ class Flow:
             sos.save(self.root/'.sos-completion.json',dict(status='finished',message_status='prepared',plan_id=p['id'],plan_hash=sos.digest(p),revision=p['revision'],user_message=result['user_message'],message_hash=hashlib.sha256(result['user_message'].encode()).hexdigest()))
             if s.get('authoring_contract',0)>=8:
                 from plan_message import review_reply
-                reviewed=review_reply(p,reply)
+                reviewed=review_reply(p,reply if reply is not None else result['user_message'])
+                if s.get('authoring_contract',0)>=11:reviewed['verification']='generated_from_current_plan'
                 sos.save(self.root/'.sos-reply-review.json',dict(reviewed,plan_hash=sos.digest(p)))
+                from plan_message import commitments
+                sos.save(self.root/'.sos-commitments.json',dict(commitments(p),plan_hash=sos.digest(p)))
             s.update(phase='delivered',handoff=r);self.save(s)
+            if s.get('authoring_contract',0)>=12:
+                from closing import record as close_turn
+                close_turn(self.root,'delivered',result['user_message'],sos.digest(p),p['revision'])
             result=self.status()
             if s.get('authoring_contract',0)>=8:
                 result.update(final_reply=reviewed['final_reply'],reply_review=reviewed['action'],
@@ -915,35 +1101,53 @@ class Flow:
 def main():
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('task_dir');sub=ap.add_subparsers(dest='action',required=True)
     p=sub.add_parser('init');p.add_argument('--goal',required=True);p.add_argument('--inputs',nargs='*',default=[]);p.add_argument('--new-request',help='仅用户另行交办新任务时记录其完整原话，保留旧任务历史')
-    p=sub.add_parser('search');p.add_argument('queries',nargs='+');p.add_argument('--focus');p.add_argument('--category');p.add_argument('--level',choices=['task','domain'],default='task')
+    p=sub.add_parser('search');p.add_argument('queries',nargs='+');p.add_argument('--focus');p.add_argument('--category');p.add_argument('--level',choices=['task','domain','method'],default='task')
     p=sub.add_parser('inspect');p.add_argument('slug');p.add_argument('--terms',nargs='+')
     p=sub.add_parser('local');p.add_argument('method_file');p.add_argument('--focus');p.add_argument('--terms',nargs='+');p.add_argument('--role',choices=['core','support'],default='core')
     p=sub.add_parser('section');p.add_argument('candidate');p.add_argument('section')
     p=sub.add_parser('methods');p.add_argument('candidate')
+    p=sub.add_parser('view');p.add_argument('result_id');p.add_argument('--page',type=int,default=1);p.add_argument('--field')
     p=sub.add_parser('resource');p.add_argument('candidate');p.add_argument('path')
-    p=sub.add_parser('probe');p.add_argument('input_index',type=int);p.add_argument('column');p.add_argument('kind',choices=['types','date_range']);p.add_argument('--sheet')
+    p=sub.add_parser('probe');p.add_argument('input_index',type=int);p.add_argument('column');p.add_argument('kind',choices=['types','date_range','labels']);p.add_argument('--sheet')
+    p=sub.add_parser('material');p.add_argument('input_index',type=int);p.add_argument('--section',type=int)
+    p=sub.add_parser('reselect');p.add_argument('title');p.add_argument('--reason',required=True)
+    p=sub.add_parser('review');p.add_argument('file')
+    sub.add_parser('route-template')
     p=sub.add_parser('receipt');p.add_argument('--files',nargs=2);p.add_argument('--reply')
     p=sub.add_parser('finish');p.add_argument('--files',nargs=2,required=True);p.add_argument('--reply')
     p=sub.add_parser('submit');p.add_argument('file')
     p=sub.add_parser('route');p.add_argument('file')
     p=sub.add_parser('assign');p.add_argument('candidate');p.add_argument('--title',required=True);p.add_argument('--why');p.add_argument('--question',action='append',default=[]);p.add_argument('--output',action='append',required=True);p.add_argument('--check',action='append',required=True);p.add_argument('--role',choices=['core','support'],default='core');p.add_argument('--after',action='append',default=[]);p.add_argument('--limit',action='append',default=[])
-    p=sub.add_parser('assess');p.add_argument('candidate');p.add_argument('--fit',choices=['suitable','unsuitable'],required=True);p.add_argument('--reason',required=True);p.add_argument('--method',action='append',default=[]);p.add_argument('--limit',action='append',default=[]);p.add_argument('--coverage',choices=['task','domain'],default='task');p.add_argument('--purpose',type=int,help='未分类用途时选择 purpose_options 的实际编号')
+    p=sub.add_parser('assess');p.add_argument('candidate');p.add_argument('--fit',choices=['suitable','unsuitable'],required=True);p.add_argument('--reason',required=True);p.add_argument('--method',action='append',default=[]);p.add_argument('--limit',action='append',default=[]);p.add_argument('--coverage',choices=['task','domain','method'],default='task');p.add_argument('--scope',help='method 覆盖时说明实际负责的问题与结果');p.add_argument('--purpose',type=int,help='未分类用途时选择 purpose_options 的实际编号')
     p=sub.add_parser('produce');p.add_argument('candidate');p.add_argument('--output',action='append',default=[]);p.add_argument('--check',action='append',required=True);p.add_argument('--after',action='append',default=[]);p.add_argument('--takeover')
     for n in ('build','publish','status'):sub.add_parser(n)
+    from planning_actions import ACTIONS,LEGACY_ACTIONS
+    assert set(sub.choices)==set(ACTIONS)|LEGACY_ACTIONS
+    for name,description in ACTIONS.items():sub.choices[name].description=description
     a=ap.parse_args();f=Flow(a.task_dir,getattr(a,'inputs',()));f.root.mkdir(parents=True,exist_ok=True)
     with edit_lock(f.root/'.sos-flow-lock'):
-        if a.action in ('search','inspect','local','section','methods','resource','probe') and f.load()['phase']!='authoring':r=f.status()
+        if f.path.exists() and f.load()['phase']=='planning_failed':
+            # Do not parse new route files or offer another action after failure.
+            r=f.status()
+        elif a.action!='init' and f.load().get('authoring_contract',0)>=11 and a.action in ('assign','produce','submit'):
+            r=dict(f.status(),status='route_interface_required',next='新任务使用 route-template / route / review；制作配套也作为路线中的 production 阶段登记。')
+        elif a.action in ('search','inspect','local','section','methods','resource','probe','material','route-template','review','reselect','view') and f.load()['phase']!='authoring':r=f.status()
         elif a.action=='init':r=f.init(a.goal,a.inputs,new_request=a.new_request)
         elif a.action=='search':r=f.search(a.queries,a.focus,a.category,a.level)
         elif a.action=='inspect':r=f.inspect(a.slug,a.terms)
         elif a.action=='local':r=f.local(a.method_file,a.focus,a.terms,a.role)
         elif a.action=='section':r=f.section(a.candidate,a.section)
         elif a.action=='methods':r=f.methods(a.candidate)
+        elif a.action=='view':r=f.view(a.result_id,a.page,a.field)
         elif a.action=='resource':r=f.resource(a.candidate,a.path)
         elif a.action=='probe':r=f.probe(a.input_index,a.column,a.kind,a.sheet)
+        elif a.action=='route-template':r=f.route_template()
+        elif a.action=='review':r=f.review(a.file)
+        elif a.action=='reselect':r=f.reselect(a.title,a.reason)
+        elif a.action=='material':r=f.material(a.input_index,a.section)
         elif a.action=='route':r=f.route(sos.read(Path(a.file)))
         elif a.action=='assign':r=f.assign(a.candidate,a.title,a.why,a.question,a.output,a.check,a.role,a.after,a.limit)
-        elif a.action=='assess':r=f.assess(a.candidate,a.fit,a.reason,a.method,a.limit,a.coverage,a.purpose)
+        elif a.action=='assess':r=f.assess(a.candidate,a.fit,a.reason,a.method,a.limit,a.coverage,a.purpose,a.scope)
         elif a.action=='produce':r=f.produce(a.candidate,a.output,a.check,a.after,a.takeover)
         elif a.action in ('build','publish'):r=f.build()
         elif a.action=='submit':r=f.submit(a.file)
@@ -951,10 +1155,30 @@ def main():
         else:
             s=f.load()
             r=f.deliver(s) if s['phase']=='awaiting_delivery' and 'next_tool' not in s.get('delivery',{}) else f.status()
-    if f.load().get('authoring_contract',0)>=10 and f.load()['phase']=='authoring' and (a.action in ('inspect','local','section','methods','resource','assess') or r.get('stop_discovery')) and r.get('status') not in ('core_choice_rejected','purpose_choice_required','method_choice_required','specific_search_required','candidate_unavailable','candidate_scope_mismatch'):
+    state=f.load()
+    if 10<=state.get('authoring_contract',0)<15 and state['phase']=='authoring' and (a.action in ('inspect','local','section','methods','resource','assess') or r.get('stop_discovery')) and r.get('status') not in ('core_choice_rejected','purpose_choice_required','method_choice_required','specific_search_required','method_coverage_required','method_comparison_required','candidate_unavailable','candidate_scope_mismatch'):
         r['next']='核对方法用途与当前需求，完成 assess 选型后用 route 登记完整业务阶段路线；同一技能可负责多个阶段。方法应用与具体工作在阶段中说明。'
+    if f.load().get('authoring_contract',0)>=11 and a.action=='assess' and r.get('assessment',{}).get('fit')=='suitable':
+        r.update(f.route_template())
+    if a.action=='status' and f.load().get('authoring_contract',0)>=12 and r.get('phase')=='delivered':
+        # Later user turns may inspect the state before executing the saved plan.
+        # Reading state must not replay an old end-of-turn dispatch instruction.
+        r={k:r[k] for k in ('phase','execution_plan','plan_hash','plan_revision','readiness') if k in r}
+        r['next']='规划已完成。若已收到用户审阅后的执行指令，按执行协议读取最新方案并 open；否则等待用户审阅。'
+    if state.get('authoring_contract',0)>=15 and not r.get('reply_contract'):
+        from flow_output import response
+        r=response(r,f.root,a.action,state['phase'])
     details=f.root/'.sos-flow-results'/(str(time.time_ns())+'.json');sos.save(details,r)
+    if state.get('authoring_contract',0)>=15 and a.action not in ('view','status'):
+        sos.save(f.root/'.sos-last-result.json',dict(result_id=details.stem,action=a.action))
+    if r.get('reply_contract'):
+        # A handled business failure is a successful controller operation.
+        # Nonzero exits are reserved for commands needing correction, otherwise
+        # hosts wrap a terminal result as an error and invite repair attempts.
+        print(json.dumps(r['reply_contract'],ensure_ascii=False));return
     if a.action=='finish' and r.get('phase') in ('delivered','delivery_blocked'):
+        if f.load().get('authoring_contract',0)>=11 and r.get('final_reply'):
+            print(r['final_reply']);return
         if f.load().get('authoring_contract',0)>=8 and r.get('final_reply'):
             print(json.dumps(dict(terminal=True,phase=r['phase'],plan_hash=r.get('plan_hash'),
                 reply_review=r['reply_review'],final_reply=r['final_reply'],
@@ -965,9 +1189,21 @@ def main():
             print(json.dumps(dict(terminal=True,phase=r['phase'],plan_hash=r.get('plan_hash'),
                                   user_message=r['user_message'],next='下一条消息原样发送 user_message 后结束。任务范围、模块和安装授权均已来自最新方案。'),ensure_ascii=False));return
         if f.load().get('authoring_contract',0)<6:print(r['user_message']);return
-    print(json.dumps(compact_for_host(r,details),ensure_ascii=False))
+    if state.get('authoring_contract',0)>=15:
+        from flow_output import render
+        print(json.dumps(render(r,details),ensure_ascii=False))
+    else:print(json.dumps(compact_for_host(r,details),ensure_ascii=False))
     if r.get('status') in ('candidate_unavailable','candidate_scope_mismatch','core_choice_rejected','flow_error') or r.get('phase')=='planning_failed':sys.exit(2)
 if __name__=='__main__':
     try:main()
     except (ValueError,KeyError,TypeError,OSError) as e:
+        from task_route import RouteValidationError
+        from review_form import ReviewInputError
+        if isinstance(e,ReviewInputError):
+            result=dict(e.result);result.setdefault('next','按 diagnostics 修正判断文件后提交；使用返回的当前 review_file，无需重写引用、哈希或读取源码。')
+            print(json.dumps(result,ensure_ascii=False));sys.exit(2)
+        if isinstance(e,RouteValidationError):
+            print(json.dumps(dict(status='route_invalid',diagnostics=e.errors,next='一次修正列出的字段，保留当前路线和选型；无需读取源码。'),ensure_ascii=False));sys.exit(2)
+        if isinstance(e,json.JSONDecodeError):
+            print(json.dumps(dict(status='json_invalid',line=e.lineno,column=e.colno,error=e.msg,next='修正 JSON 语法后重新提交原文件。'),ensure_ascii=False));sys.exit(2)
         print(json.dumps(dict(status='flow_error',error=str(e),next='保留现场；按具体业务字段修正，不修改脚本或内部状态。'),ensure_ascii=False));sys.exit(2)

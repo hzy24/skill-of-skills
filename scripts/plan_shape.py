@@ -45,3 +45,4 @@ def errors(value,schema=SHAPE,path='plan'):
     return []
 
 SHAPE.update(task_route_version=int,task_route={'reason':str,'verification':str})
+SHAPE['stage_review_version']=int

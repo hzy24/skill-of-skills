@@ -10,6 +10,9 @@ def replace(p,nid,skill,base,reason,verification,*,support=False):
     if not isinstance(reason,str) or not reason.strip() or not isinstance(verification,str) or not verification.strip():
         raise ValueError('需要实际的换用原因和宿主入口/依赖验证依据')
     result=copy.deepcopy(p)
+    state=base/'.sos-flow.json'
+    flow=sos.read(state) if state.exists() else {}
+    prior={}
     n=next((n for n in result['nodes'] if n['id']==nid),None)
     if n is None:raise ValueError('未知模块')
     needs=[x for x in result['capability_needs'] if x['id'] in n['capability_need_ids']]
@@ -29,6 +32,11 @@ def replace(p,nid,skill,base,reason,verification,*,support=False):
     compiled=expand(draft,base)
     if is_support and 'method_scope' in skill:compiled['capability_candidates'][0]['method_scope']=skill['method_scope']
     c=compiled['capability_candidates'][0];m=compiled['materials'][-1]
+    original=next((x for x in flow.get('candidates',{}).values() if x['name']==c['name'] and x['source']==c['source']),{})
+    prior=original.get('assessment',{})
+    adoption=prior if result.get('method_coverage_version')==1 and prior.get('coverage')=='method' else None
+    if adoption and adoption.get('source_sha256')!=c.get('method_support',{}).get('sha256'):
+        raise ValueError('方法选型来源已变化；重新核读评估后换用')
     def fresh(prefix,values):
         i=1
         while prefix+str(i) in values:i+=1
@@ -59,13 +67,13 @@ def replace(p,nid,skill,base,reason,verification,*,support=False):
     if result.get('profile_policy_version')==1:
         from capability_profile import classify,core_issue
         path=Path(m['path']);path=path if path.is_absolute() else base/path
-        c['source_profile']=classify(path.read_text())
+        c['source_profile']=classify(path.read_text(),3 if result.get('method_coverage_version')==1 else 2 if flow.get('authoring_contract',0)>=9 else 1)
         needs[0]['expertise']=dict(request=p['goal'],specialty=c['source_profile']['identity'],reason=reason)
-        issue=core_issue(p['goal'],c['source_profile'],needs[0]['expertise']) if not is_support else None
+        issue=core_issue(p['goal'],c['source_profile'],needs[0]['expertise'],adoption) if not is_support else None
         if issue:raise ValueError(issue)
         from capability_profile import task_kind
         format_task=task_kind(p['goal'])=='artifact' and c['source_profile']['kind']=='artifact_tool'
-        if result.get('discovery_scope') and not is_support and not format_task:
+        if result.get('discovery_scope') and not is_support and not format_task and adoption is None:
             from discovery_scope import source_issue
             selected=needs[0].get('method_evidence',{}).get('sections',[])
             issue=source_issue(result['discovery_scope'],c['source_profile']['identity'],selected)
@@ -86,10 +94,16 @@ def replace(p,nid,skill,base,reason,verification,*,support=False):
         if result.get('selection_policy_version')==2:
             # Rebinding is an explicit new task-method choice. A broader domain
             # choice must retain its original reviewed comparison evidence.
-            original=next((x for x in sos.read(state)['candidates'].values() if x['name']==c['name'] and x['source']==c['source']),{}) if state.exists() else {}
-            prior=original.get('assessment',{})
-            c['selection_assessment'].update({k:copy.deepcopy(v) for k,v in prior.items() if k in ('coverage','compared_candidates','specific_searches')})
+            c['selection_assessment'].update({k:copy.deepcopy(v) for k,v in prior.items() if k in ('coverage','compared_candidates','specific_searches','scope','limits')})
             c['selection_assessment'].setdefault('coverage','task')
+    if adoption:
+        from method_coverage import disclosure
+        c['selection_assessment']['reason']=adoption['reason']
+        c['selection_assessment']['methods']=copy.deepcopy(adoption['methods'])
+        label=disclosure(c['name'],c['selection_assessment'])
+        if label not in result['constraints']:result['constraints'].append(label)
+        contract['invocation']+=' '+label
+        n['bindings'][0]['contract']['invocation']=contract['invocation']
     result['materials'].append(m);result['capability_candidates'].append(c);result['revision']+=1
     result.setdefault('capability_changes',[]).append(dict(node=nid,previous=oldcandidate['name'],selected=c['name'],reason=reason,revision=result['revision']))
     sos.require_plan(result)
@@ -123,17 +137,22 @@ def add_support(p,nid,skill,base,reason,verification,outputs):
     if result.get('selection_review_version')==1:
         core=next((x for x in result['capability_needs'] if x['id'] in n['capability_need_ids'] and x.get('role')=='core'),None)
         if not core or c.get('source_profile',{}).get('kind')!='artifact_tool':raise ValueError('辅助制作需要保留本模块的专业核心负责技能')
-        scope='将本模块专业技能的已完成结果制作成约定文件，沿用其判断、数字与依据。'
+        from task_route import PRODUCTION_SCOPE
+        scope=PRODUCTION_SCOPE
         need['standard']=scope;need['decision']['application']=scope;b['scope']=scope
         b['contract'].update(inputs=[mid],production_from_need=core['id'],invocation=scope+' 使用 '+m['path']+' 的制作流程。')
     n['inputs'].append(mid);n['bindings'].append(b);n['capability_need_ids'].append(need['id'])
     result['capability_needs'].append(need);result['capability_candidates'].append(c);result['materials'].append(m)
     result['revision']+=1;result.pop('professional_review',None)
     result.setdefault('capability_changes',[]).append(dict(node=nid,added=c['name'],outputs=outputs,reason=reason,revision=result['revision']))
+    from task_route import sync
+    sync(result)
     sos.require_plan(result)
     return result
 
 def update(plan,state,nid,skill,reason,verification,base_hash,add=False,outputs=None):
+    from closing import guard_failure
+    guard_failure(Path(plan).parent)
     p=sos.read(plan)
     if sos.digest(p)!=base_hash:raise ValueError('方案已有新版本；读取最新 plan.json 后重新评估换用，保留用户修改')
     if state.exists():sos.read_state(state)

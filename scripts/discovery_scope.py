@@ -13,6 +13,13 @@ GENERIC_ZH={'分析','数据','管理','报告','业务','经营','专业','技�
 class QueryConceptError(ValueError):
     pass
 
+def method_queries(queries):
+    """Preserve actual method names; business-query suffix removal is unsuitable here."""
+    values=list(dict.fromkeys(q.strip() for q in queries))
+    if not 1<=len(values)<=4 or any(not 2<=len(q)<=12 or not re.search('[\u4e00-\u9fff]',q) or re.search(r'[，、；。！？\s]',q) or q in GENERIC_ZH for q in values):
+        raise QueryConceptError('方法检索使用 1–4 个中文方法短词，每项 2–12 字，例如相关性分析、统计建模；任务与结论范围保留在原始目标。')
+    return values
+
 def atomic_queries(queries):
     """Separate syntax, not guessed synonyms. Never send sentences to recall.
 

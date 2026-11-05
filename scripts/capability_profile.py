@@ -36,15 +36,18 @@ def classify(raw,version=1):
     purpose=re.split(r'例如|比如|示例|examples?\s*[:：]|e\.g\.',ident.split('\n',1)[-1],flags=re.I)[0]
     domains=list(dict.fromkeys(m.group(0) for m in re.finditer(PROFESSIONS,purpose,re.I)))
     functions=[k for k,pattern in FUNCTIONS.items() if re.search(pattern,purpose,re.I)]
+    if version>=3 and re.search(r'统计|回归|相关性|时间序列|运筹|优化求解|statistic|regression|correlation|time.series|operations.research|optimization',purpose,re.I) and 'statistics' not in functions:
+        functions.append('statistics')
     broad=bool(re.search(r'全域数据|通用(?:数据|可视化|统计)|跨领域|general.purpose|arbitrary.data|any.dataset',purpose,re.I))
     kind='artifact_tool' if artifact or 'visualization' in functions and (broad or not domains) or 'file_production' in functions and not domains else 'general_analysis' if general or functions and (broad or not domains) else 'specialty_candidate' if domains else 'unclassified'
+    if version>=3 and not artifact and 'statistics' in functions and (not domains or broad or kind=='artifact_tool'):kind='general_analysis'
     options=list(dict.fromkeys(v.strip()[:240] for v in re.split(r'\n|(?<=[。；.!])\s+',purpose) if len(v.strip())>=4 and not v.strip().startswith('#')))[:12]
-    return dict(kind=kind,identity=ident,profile_version=2,professional_signals=domains,
+    return dict(kind=kind,identity=ident,profile_version=3 if version>=3 else 2,professional_signals=domains,
                 functions=functions,purpose_basis=purpose,purpose_options=[dict(number=i,text=v) for i,v in enumerate(options,1)])
 
 def responsibility_issue(goal,profile,purpose=None):
     """Check functional eligibility. Semantic task fit still requires host review."""
-    if profile.get('profile_version')!=2:return None
+    if profile.get('profile_version') not in (2,3):return None
     if profile.get('kind')=='unclassified':
         if not isinstance(purpose,str) or not 4<=len(purpose.strip())<=240 or purpose not in profile['identity']:
             return '用途尚未分类；核读 purpose_options 后用 --purpose 选择专业用途编号，在 reason 说明它负责的业务判断；程序自动提取原文。'
@@ -61,7 +64,10 @@ def task_kind(goal):
     target=re.search(r'pptx?|xlsx?|docx?|pdf|演示|幻灯|表格|文档|海报|图表|仪表板|presentation|spreadsheet|document|chart|dashboard',goal,re.I)
     return 'artifact' if artifact and target and not business else 'domain'
 
-def core_issue(goal,profile,expertise):
+def core_issue(goal,profile,expertise,adoption=None):
+    if adoption is not None:
+        from method_coverage import issue
+        return issue(profile,adoption)
     issue=responsibility_issue(goal,profile,(expertise or {}).get('specialty'))
     if issue:return issue
     kind=profile.get('kind')
@@ -89,9 +95,10 @@ def issues(plan):
         # as provenance instead of demanding that its words occur in the new goal.
         reviewed_request=plan.get('primary_assignment',{}).get('request',plan['goal']) if plan.get('selection_review_version')==1 else plan['goal']
         if need.get('expertise',{}).get('request')==plan['goal']:reviewed_request=plan['goal']
-        issue=core_issue(reviewed_request,profile,need.get('expertise')) if isinstance(profile,dict) else '核心候选缺少来源画像，重新核对候选原文。'
+        adoption=candidate.get('selection_assessment') if plan.get('method_coverage_version')==1 and candidate.get('selection_assessment',{}).get('coverage')=='method' else None
+        issue=core_issue(reviewed_request,profile,need.get('expertise'),adoption) if isinstance(profile,dict) else '核心候选缺少来源画像，重新核对候选原文。'
         format_task=task_kind(plan['goal'])=='artifact' and profile and profile.get('kind')=='artifact_tool'
-        if not issue and plan.get('discovery_scope') and not format_task:
+        if not issue and plan.get('discovery_scope') and not format_task and adoption is None:
             from discovery_scope import source_issue
             selected=need.get('domain_method_evidence',[])
             issue=source_issue(plan['discovery_scope'],profile['identity'],selected)
@@ -100,4 +107,6 @@ def issues(plan):
     result.extend(input_issues(plan))
     from selection_review import plan_issues
     result.extend(plan_issues(plan))
+    from method_coverage import plan_issues as method_issues
+    result.extend(method_issues(plan))
     return result

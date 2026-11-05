@@ -2,6 +2,8 @@
 
 收到“按方案执行”后读取任务目录最新 plan.json。HTML 保存不启动任务；页面保存失败先修复保存，执行以成功写回的版本为准。新任务先用 `flow.py <任务目录> status` 确认 phase=delivered；缺交付时按返回的 next_tool 和 receipt_command 补齐。旧任务核对 handoff.py 的交付记录。首次使用用户审阅后的执行原话；复核技能适配、安装与宿主入口。所有核心业务模块都须由专业 Skill 承担。
 
+若原任务为 planning_failed，原样发送返回的 final_reply 并结束。失败终态优先于残留 plan.json、聊天替代方案和普通执行确认；安装、准备、换绑及执行入口均检查原任务状态。用户另行要求修复或交办新任务时，再处理该项新指令。
+
 ## 每个模块的公开命令
 
 ### 1. 交接
@@ -12,7 +14,7 @@ python <skill>/scripts/execute.py open <任务目录>/plan.json --node N1 --evid
 
 脚本读取当前方案，检查依赖与输入版本，初始化或协调 run.json，输出本模块的业务委托、所选方法、上游文件、receipt.json 路径和下一条完整命令。授权参数填写用户确认原话，不填写模型对初始任务的授权推断；授权已登记后可省略。needs_plan_delivery 时先交付并登记附件；awaiting_user_confirmation 时结束回复等待用户。若返回 preparation_required，按返回的 ready 命令核验并登记，再次 open。外部技能先取得具体安装授权。不要读源码寻找准备字段，也不要根据 plan_hash 是否存在猜测方案是否编译。
 
-按业务委托与真实 Skill 指令执行。成熟 Skill 自主安排内部分析、草稿、计算与修复；SoS 只管理范围、交接与成果标准。方法已在当前上下文读取且版本不变时直接采用；按需读取资源，避免重复全文加载。执行新专业方法前先确认它已绑定本模块。
+按业务委托与真实 Skill 指令执行。成熟 Skill 自主安排内部分析、草稿、计算与修复；SoS 只管理范围、交接与成果标准。方法已在当前上下文读取且版本不变时直接采用；按需读取资源，避免重复全文加载。执行新专业方法前先确认它已绑定本模块。采用可迁移方法时，委托中保留负责范围、比较理由与判断边界；按方案使用已有制度或交接给约定能力，专业结论遵循已说明的依据。
 
 open 返回 outputs 绝对路径和 submit 完整命令。按约定路径生成成果，将真实工具输出、测试结果或具体方法执行记录保存到 open 返回的 execution_log 绝对路径，也可复用已有日志。--applied 说明方法如何用于本次成果。仅复制技能原文或输入材料不足以证明执行；无需编辑 receipt。
 
@@ -83,3 +85,5 @@ python <skill>/scripts/execute.py audit <任务目录>/plan.json
 当前计划的节点代表业务阶段。同一 Skill 连续负责多个节点时，复用已读取且版本未变的方法、已获准的安装与上游结果；当前节点只处理自己的问题与产出。逐阶段 open / submit / accept 记录结果，无需用户重复确认原方案内的正常推进。不同 Skill 的交接通过上游结果完成。
 
 `delivery_role=intermediate` 为阶段结果，保存在任务目录用于复核和下游工作；`final` 为向用户交付的文件。两类均须真实生成并检查。最终交付按最新 plan.json 的 final 清单。用户调整阶段、依赖、成果或完成标准后，读取最新方案，复核受影响节点并重新协调执行状态。
+
+方案适配需要复核时，运行 execute.py 返回的 method_review.py open 命令。新方案使用只读 context_file 与独立 review_file；只填写 need、verdict、reason，随后运行返回的 next_command。未变化阶段的判断自动复用。

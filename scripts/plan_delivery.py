@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Prepare connected plan attachments; host delivery is a separate, explicit step."""
-import argparse,json,os,shlex,subprocess,sys,time,threading
+import argparse,json,shlex,subprocess,sys,time,threading
 from pathlib import Path
 import sos
 from plan_io import edit_lock

@@ -2,6 +2,14 @@
 import re
 from plan_status import assess,confirmation
 
+def commitments(plan):
+    """Machine-readable promises, generated from the live output/approval registry."""
+    state=assess(plan)
+    return dict(plan_id=plan['id'],revision=plan.get('revision'),status=state['status'],
+        outputs=[dict(id=d['id'],name=d['title'],format=d['format']) for d in plan['deliverables'] if d.get('delivery_role','final')=='final'],
+        stages=[dict(id=n['id'],skills=[b['skill'] for b in n['bindings']],outputs=n['outputs']) for n in plan['nodes']],
+        installations=state.get('installation_approval_required',[]),confirmation=confirmation(plan),verification='prepared_from_plan')
+
 def render(plan,delivered,blocked_reason=None):
     state=assess(plan);status=state['status']
     if not delivered:
@@ -57,7 +65,14 @@ def check_response(plan,message):
     expected_text=presentation_text(expected);actual_text=presentation_text(message)
     matched=not missing and actual_text==expected_text
     expected_lines=expected_text.splitlines();actual_lines=(actual_text or '').splitlines()
+    # Explicitly harmless attachment pointers; arbitrary new claims stay unverified.
+    cosmetic=re.compile(r'^(?:附件)?(?:见|请见|请查看)上方(?:的)?(?:两张卡片|附件|文件卡片)[。！!]*$')
+    extra=[v for v in actual_lines if v not in expected_lines]
+    omitted=[v for v in expected_lines if v not in actual_lines]
+    semantic_match=not missing and not omitted and all(cosmetic.fullmatch(v) for v in extra)
     return dict(consistent=matched,comparison='presentation_only_normalization',
+                commitments_consistent=semantic_match,verbatim=matched,
+                presentation_only=semantic_match and not matched,
                 missing_commitments=missing,
                 omitted_lines=[v for v in expected_lines if v not in actual_lines][:8] if not matched else [],
                 added_lines=[v for v in actual_lines if v not in expected_lines][:8] if not matched else [],

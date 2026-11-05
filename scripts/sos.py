@@ -211,7 +211,10 @@ def apply_edits(plan, request):
     if result != plan:
         if result.get('review_protocol_version')==2:
             from method_review import basis
-            if basis(result)!=basis(plan):result.pop('professional_review',None)
+            if basis(result)!=basis(plan):
+                if plan.get('stage_review_version')==1 and plan.get('professional_review'):
+                    result['professional_review_cache']=plan['professional_review']
+                result.pop('professional_review',None)
         result['revision'] = plan['revision'] + 1
         result.pop('confirmation', None)
     require_plan(result)

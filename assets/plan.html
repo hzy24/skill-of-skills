@@ -289,6 +289,12 @@ function showTip(n,target){
    // Keep a visible source link in the work view as well.
    const quick=link.cloneNode(true);quick.textContent=binding.skill+' ↗';panels.work.append(quick);}
   line(box,'负责工作',binding.scope);line(box,'选择理由',binding.reason||candidate?.acquisition?.reason);
+  const adoption=candidate?.selection_assessment;
+  if(adoption?.coverage==='method'){
+   line(box,'能力选择','采用可迁移的专业方法');line(box,'负责范围',adoption.scope);
+   line(box,'方法比较',adoption.reason);list(box,'判断边界与处理',adoption.limits);
+   list(box,'已比较的业务能力',(adoption.compared_candidates||[]).map(x=>x.name+'：'+x.reason));
+  }
   const acquisition=candidate?.acquisition;
   if(acquisition){
    line(box,'解决的问题',acquisition.solves);
@@ -299,7 +305,7 @@ function showTip(n,target){
    if(candidate.setup?.status!=='available')line(box,'安装操作','在对话中确认安装 '+binding.skill+'，由 Agent 下载并配置。');
   }else{line(box,'安装依据',candidate?.source);line(box,'环境记录',status.detail);}
   const review=(plan.professional_review?.items||[]).find(r=>r.skill===binding.skill&&(n.capability_need_ids||[]).includes(r.need));
-  if(review){const more=el('details');if(review.verification==='source_and_ownership_only')line(more,'核验范围','Agent 判断方法适配；程序核对来源和职责绑定。专业结果在执行时验证。');more.append(el('summary','方法适配依据'));line(more,'与任务的契合',review.reason);line(more,'输入条件',review.input_basis);line(more,'适用范围',review.limits);box.append(more);}
+  if(review){const more=el('details');if(review.verification==='host_stage_fit_judgment')line(more,'核验范围','Agent 已核对当前阶段与任务目标、方法及材料前提的契合；专业结果在执行时验证。');if(review.verification==='source_and_ownership_only')line(more,'核验范围','Agent 判断方法适配；程序核对来源和职责绑定。专业结果在执行时验证。');more.append(el('summary','方法适配依据'));line(more,'与任务的契合',review.reason);line(more,'输入条件',review.input_basis);line(more,'适用范围',review.limits);box.append(more);}
   const need=(plan.capability_needs||[]).find(x=>(n.capability_need_ids||[]).includes(x.id)&&x.decision?.candidate_id===binding.candidate_id);
   if(need&&!need.method_evidence)line(box,'方法依据','当前方案缺少方法适配依据');
   if(need?.method_evidence){const original=el('details');original.append(el('summary','查看采用的方法原文'),el('p',need.method_evidence.excerpt));box.append(original);}

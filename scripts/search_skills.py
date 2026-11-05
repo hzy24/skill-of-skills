@@ -51,8 +51,9 @@ def search(task,queries,category=None,reader=fetch):
     task=Path(task).resolve();task.mkdir(parents=True,exist_ok=True)
     draft=task/'draft.json';clock=session_path(draft);cache=task/'.sos-skill-search.json'
     controller=task/'.sos-flow.json'
-    contract=json.loads(controller.read_text()).get('authoring_contract',0) if controller.exists() else 0
-    max_requests=12 if contract>=7 else MAX_REQUESTS
+    state=json.loads(controller.read_text()) if controller.exists() else {}
+    contract=state.get('authoring_contract',0)
+    max_requests=16 if contract>=13 and state.get('method_search_used') else 12 if contract>=7 else MAX_REQUESTS
     searches=[];candidates={}
     for query in queries:
         if contract>=7:

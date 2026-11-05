@@ -181,6 +181,8 @@ def require_install_approval(evidence):
         raise ValueError('安装建议或问题尚未获得肯定答复；记录具体安装请求与用户同意后继续')
 
 def install(proposal,task,proposal_hash,evidence,reader=fetch):
+    from closing import guard_failure
+    guard_failure(task)
     p=validate(proposal)
     if p['schema'] not in ('sos-install-proposal-v1','sos-tencent-proposal-v1'):raise ValueError('元景市场技能由宿主市场工具安装；随后 record-market 登记实际结果')
     if proposal_hash!=digest(p):raise ValueError('安装提案已变化，原授权不能复用')
@@ -221,6 +223,8 @@ def verify_install(p,target):
         verify_file(f,path.read_bytes())
 
 def record_market(p,task,proposal_hash,evidence,method,record):
+    from closing import guard_failure
+    guard_failure(task)
     validate(p,require_size=True)
     if p['schema']!='sos-market-proposal-v1' or proposal_hash!=digest(p):raise ValueError('需要当前市场安装提案')
     require_install_approval(evidence)

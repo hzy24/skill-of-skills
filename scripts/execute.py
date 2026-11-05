@@ -36,6 +36,8 @@ def next_step(p,s,plan,state):
     return shlex.join([sys.executable,str(Path(__file__).resolve()),'audit',str(plan),'--state',str(state)])
 
 def ready(plan,state,nid,verification,base_hash):
+    from closing import guard_failure
+    guard_failure(plan.parent)
     """Register host verification once; derive all redundant readiness fields."""
     p=sos.read(plan);n=node_of(p,nid)
     if sos.digest(p)!=base_hash:raise ValueError('方案已变化；重新 open 获取最新方案后核验')
@@ -90,6 +92,11 @@ def ready(plan,state,nid,verification,base_hash):
                 instruction='准备完成；首次 open 加 --evidence 记录实际执行授权。')
 
 def open_node(plan,state,nid,evidence=None):
+    from closing import guard_failure,envelope,FAILED
+    try:guard_failure(plan.parent)
+    except ValueError as error:
+        if str(error)!=FAILED:raise
+        return dict(envelope('planning_failed',FAILED),status='planning_failed',outputs={})
     from planning_session import validate_owner
     validate_owner(plan.parent)
     validate_owner(state.parent)
