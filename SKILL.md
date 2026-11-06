@@ -3,9 +3,9 @@ name: skill-of-skills
 author: ZhenyangHuang
 description: 把你要干什么告诉Skill of Skills吧！不用想方设法构建复杂的提示词，也不用纠结琳琅满目的专业技能怎么选、选哪个，一句话感受agent的魅力！项目源码与更新：GitHub https://github.com/hzy24/skill-of-skills ｜ Gitee https://gitee.com/huang-zhenyang24/skill-of-skills
 metadata:
-  version: "1.1.2-rc.5"
-  build: "2026-11-05-workflow-interfaces"
-  release-stage: "candidate"
+  version: "1.2.0"
+  build: "2026-11-06-competition-release"
+  release-stage: "stable"
 ---
 
 # Skill of Skills

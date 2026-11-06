@@ -38,11 +38,21 @@
 
 HTML 保存需要宿主支持运行随包保存服务并访问其地址；技能目前面向第一届数智公司“元景杯”数字员工技能创新大赛开发，在元景数字员工上实现，具体HTML集成方式见 [元景保存说明](references/yuanjing.md)。
 
-## 元景数字员工benchmark测试结果
+## Benchmark：24 题 ABC 对照测试
 
-[查看「部门目标完成质量」A / B / C 对比测试](docs/benchmarks/department-goal-quality/README.md)：A **20.31**，B **20.55**，C **24.82**。页面包含测试设置、评分口径及结果边界。
+基于 InsightEval，随机抽取 4 轮、每轮 6 道不同题目，比较直接交办、匹配专业技能与 Skill of Skills。每题以直接交办得分归一化为 100。
 
-没有更多免费token进行更全量的benchmark测试了QAQ
+| 组别 | 平均逐题得分提升 | 汇总耗时增加 |
+|---|---:|---:|
+| A · 直接交办 | 基线 | 基线 |
+| B · 匹配专业技能 | +29.8% | +24.8% |
+| C · Skill of Skills | **+32.4%** | +42.9% |
+
+SoS 在全部 24 道题上高于直接交办，在 15 道题上高于匹配专业技能组。评分采用 ROUGE Insight F1。
+
+![Skill of Skills 与直接交办的24题对照](docs/benchmarks/insighteval-24/assets/ac-comparison.png)
+
+[完整测试说明、逐题数据与复现脚本](docs/benchmarks/insighteval-24/README.md)
 
 ## 第三方来源
 
